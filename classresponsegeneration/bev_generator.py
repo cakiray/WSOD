@@ -7,10 +7,11 @@ import random
 
 class bev_generator(object):
     
+    # generates BEV of point cloud by subsampling points with num_points
     def generate_BEV_matrix(pc, crm, num_points=100000):
         
         if len(crm.shape) == 1:
-                crm = np.expand_dims(crm, axis=1)
+            crm = np.expand_dims(crm, axis=1)
         size = pc.shape[0]
         if size > num_points:
             l = list(range(0, size))
@@ -21,12 +22,25 @@ class bev_generator(object):
             crm = crm[l,:]
            
         pc = np.hstack([pc[:,0:1],pc[:,2:3],pc[:,3:4]])
-        #pc = np.expand_dims(pc, axis=1)
-        #crm = np.expand_dims(crm, axis=1)
-       
+     
         return pc, crm
         
+    def subsample_pc_crm(pc, crm, num_points=100000):
         
+        if len(crm.shape) == 1:
+            crm = np.expand_dims(crm, axis=1)
+            
+        size = pc.shape[0]
+        
+        if size > num_points:
+            l = list(range(0, size))
+            random.shuffle(l)
+            l = l[:num_points]
+            pc = pc[l,:]
+        
+            crm = crm[l,:]
+     
+        return pc, crm
 
     # generates BEV of point cloud, values are set using Z values of point cloud
     def generate_BEV_map_Z( pc, lr_range=[-20, 20], bf_range=[-20, 20], res=0.05):
