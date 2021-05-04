@@ -5,8 +5,9 @@ from calibration import *
 
 class CRM_generator(object):
 
-    def save_class_reponse_map_3D(class_response_path, N):
-
+    def save_center_reponse_map( _in3d = True):
+        
+        N = len( os.listdir( os.path.join( root_dir, labels_path)) )
         for idx in range(N):
             labels = utils.read_labels( os.path.join(root_dir, labels_path), idx)
             points = utils.read_points( os.path.join(root_dir, data_train_path), idx)
@@ -44,7 +45,7 @@ class CRM_generator(object):
                     filt = np.logical_and(x_filt, y_filt)  # Must be both established
                     filt = np.logical_and(filt, z_filt)  # Must be both established
 
-                    labels = utils.set_normal_label(max_point_AABB, min_point_AABB, points, filt)
+                    labels = utils.set_normal_label(max_point_AABB, min_point_AABB, points, filt, _in3d)
                     map[:,0][filt] = labels
                     #vehicles to R, person to G, cyclist to B, others to R&G
                     color_ind = 0
@@ -67,8 +68,10 @@ class CRM_generator(object):
                     labels_crm.append(crm)
 
             #self.visualize_pointcloud(points, map, color_ind)
-            np.save(class_response_path+'/crm/%06d' % (idx), map)
-            with open(class_response_path+'/labels/%06d.txt' % (idx), 'w') as x:
+            crm_path = os.path.join( root_dir, crm_train_path_pc)
+            label_path = os.path.join( root_dir, crm_train_path_labels)
+            np.save( crm_path +'/%06d' % (idx), map)
+            with open(label_path+'/%06d.txt' % (idx), 'w') as x:
                 x.write('\n'.join(' '.join(row) for row in labels_crm))
 
     def save_class_reponse_map_2D(class_response_path, N):
@@ -121,3 +124,6 @@ class CRM_generator(object):
             #self.visualize_pointcloud(points, map)
             #np.save(class_response_path+'/%06d' % (idx),np.concatenate((points[:,0:3],map),axis=1))
             #np.save(class_response_path+'/%06d' % (idx),map)
+
+if __name__=='__main__':
+    CRM_generator.save_center_reponse_map(_in3d = False)

@@ -2,18 +2,14 @@
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-from classresponsegeneration.kitti_dataset import KITTI_Dataset
-from classresponsegeneration.models.BasicCNN_2d import BasicCNN
-from classresponsegeneration.models.SPCNN_Minkowski import Basic_SPCNN, UNet
-from classresponsegeneration.utils import * 
+from centerresponsegeneration.kitti_dataset import KITTI_Dataset
+from centerresponsegeneration.models.BasicCNN_2d import BasicCNN
+from centerresponsegeneration.models.SPCNN_Minkowski import Basic_SPCNN, UNet
+from centerresponsegeneration.utils import * 
 import MinkowskiEngine as ME
 import torch
 import numpy as np
-from classresponsegeneration.config import * 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+from centerresponsegeneration.config import * 
 
 
 # Press the green button in the gutter to run the script.

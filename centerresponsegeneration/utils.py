@@ -49,18 +49,16 @@ def visualize_pointcloud( pc, colors, idx):
     pcd.colors = open3d.open3d.utility.Vector3dVector(color) # for us, it corresponds to class response map
     open3d.open3d.visualization.draw_geometries([pcd])
 
-def distance( p1, p2, _2D=False):
-    if not _2D:
+def distance( p1, p2, _in3d=True):
+    if _in3d:
         return np.sqrt( (p1[:,0]-p2[0])**2 +  (p1[:,1]-p2[1])**2 + (p1[:,2]-p2[2])**2 )
     else:
         return np.sqrt( (p1[:,0]-p2[0])**2 + (p1[:,1]-p2[1])**2 )
 
 # calculates the normalized value of object in point cloud
-def set_normal_label(max, min, point, filt ,_2D=False):
-    if not _2D:
-        labels =  1 - ( distance(point[:,0:3] , min) / distance(np.array([max]),min) )
-    else:
-        labels =  1 - ( distance(point[:,0:2] , min, True) / distance(np.array([max]),min, True) )
-
+def set_normal_label(max, min, point, filt , _in3d=True):
+    
+    labels =  1 - ( distance(point[:,0:3] , min, _in3d) / distance(np.array([max]),min, _in3d) )
+  
     return labels[filt]
 
