@@ -2,11 +2,12 @@
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-from centerresponsegeneration.kitti_dataset import KITTI_Dataset
+"""from centerresponsegeneration.kitti_dataset import KITTI_Dataset
 from centerresponsegeneration.models.BasicCNN_2d import BasicCNN
 from centerresponsegeneration.models.SPCNN_Minkowski import Basic_SPCNN, UNet
-from centerresponsegeneration.utils import * 
-import MinkowskiEngine as ME
+
+import MinkowskiEngine as ME"""
+from centerresponsegeneration.utils import *
 import torch
 import numpy as np
 from centerresponsegeneration.config import * 
@@ -174,7 +175,19 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     #train_basicCNN()
         
-    train_SPCNN(device)
+    #train_SPCNN(device)
+    filenames = os.listdir("/Users/ezgicakir/Downloads/drive-download-20210509T093946Z-001")
+    for file in filenames:
+        pc_file = open (os.path.join(root_dir, data_train_path, file.replace('npy', 'bin')), 'rb')
+        pc = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
 
+        x = "/Users/ezgicakir/Downloads/drive-download-20210509T093946Z-001"
+        out = np.load( os.path.join(x, file)).astype(float)
+
+        print(os.path.join(root_dir, crm_train_path_pc, file))
+        crm = np.load( os.path.join(root_dir, crm_train_path_pc, file)).astype(float)
+
+        #visualize_pointcloud( pc, crm, idx=0)
+        visualize_pointcloud( pc, out, idx=0)
 
     # See PyCharm help at https://www.jetbrains.com/help/pycharm/

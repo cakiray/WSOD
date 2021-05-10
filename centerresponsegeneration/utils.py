@@ -41,12 +41,15 @@ def read_points( lidar_path, idx):
 def visualize_pointcloud( pc, colors, idx):
     pcd=open3d.open3d.geometry.PointCloud()
     pcd.points= open3d.open3d.utility.Vector3dVector(pc[:, 0:3])
-    #colors = 255* colors
+    colors = 255* colors
     color = np.zeros((colors.shape[0], 3))
     if len(colors.shape) == 2:
         colors = colors[:,0]
-    color[:,idx] = colors
+
+    color[:,idx+1] = colors
+
     pcd.colors = open3d.open3d.utility.Vector3dVector(color) # for us, it corresponds to class response map
+
     open3d.open3d.visualization.draw_geometries([pcd])
 
 def distance( p1, p2, _in3d=True):

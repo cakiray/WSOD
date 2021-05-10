@@ -1,0 +1,3 @@
+[submodule "spvnas"]
+	path = spvnas
+	url = ./
