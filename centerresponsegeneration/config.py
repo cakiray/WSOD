@@ -8,7 +8,7 @@ calib_train_path = 'data_object_calib/training/calib'
 calib_test_path = 'data_object_calib/testing/calib'
 #crm_train_path_pc = 'center_response_map_2D/training/crm'
 
-crm_train_path_pc = 'crm/training/crm'
+crm_train_path_pc = 'center_response_maps'
 crm_test_path_pc = 'center_response_map_2D/testing/crm'
 crm_train_path_labels = 'center_response_map_2D/training/labels'
 crm_test_path_labels = 'center_response_map_2D/testing/labels'
