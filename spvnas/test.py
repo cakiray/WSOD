@@ -108,9 +108,9 @@ def main() -> None:
     # important
     model.eval()
     c=0
-    for feed_dict in tqdm(dataflow['test'], desc='eval'):
-        #if c < 10:
-        if True:
+    for feed_dict in tqdm(dataflow['train'], desc='eval'):
+        if c < 20:
+        #if True:
             _inputs = dict()
             for key, value in feed_dict.items():
                 if not 'name' in key:
@@ -123,7 +123,7 @@ def main() -> None:
             outputs = model(inputs)
             
             # ===============================
-            # PRM object to calculate gradient
+            # PRM paper to calculate gradient
             grad_output = outputs.new_empty(outputs.size())
             grad_output.zero_()
             
@@ -131,21 +131,43 @@ def main() -> None:
             grad_output[torch.argmax(outputs, dim=0),0] = 1
             
             if inputs.F.grad is not None: 
-                inputs.F.grad.zero_() # shape is outputs.shape[0]x4 , 2D 
+                inputs.F.grad.zero_() # shape is Nx4 , 2D 
                 
             # Calculate peak response maps backwarding the output
             outputs.backward(grad_output, retain_graph=True)
             #print("sè¦ºfè¦ºrr:", grad_output[torch.argmax(outputs, dim=0)] ) 
-    
-            prm = inputs.F.grad.detach().sum(1).clone().clamp(min=0).cpu() # shape: outputs.shape[0], 1D
             
+            grad = inputs.F.grad.detach().cpu() # Nx4
+            #grad = torch.sum(grad[:,0:2],1)
+            """grad = np.absolute(grad)
+            #normalize gradient
+            mins= np.amin(np.array(grad), axis=0)
+            maxs = np.amax(np.array(grad), axis=0)
+            grad = (grad-mins)/(maxs-mins)
+            grad[grad==float('inf')] = 0"""
+            
+            # 0 <= grad <= 1
+            prm = grad # shape: Nx4, 2D
+            #prm = grad.sum(1).clone().clamp(min=0)
+            # print(np.all( np.logical_and( np.array(grad)>=0.0, np.array(grad)<=1.0 ) )) #True, 
             # ===============================
             
             # ===============================
             # Naive way to calculate gradients
             """
             outputs.backward(torch.ones_like(outputs), retain_graph=True)
-            prm = inputs.F.grad.detach().sum(1).clone().clamp(min=0).cpu() # shape: outputs.shape[0], 1D
+            #prm = inputs.F.grad.detach().sum(1).clone().clamp(min=0).cpu() # shape: N, 1D
+            
+            grad = inputs.F.grad.detach().clone().cpu() # Nx4
+            
+            #normalize gradient
+            mins= np.amin(np.array(grad), axis=0)
+            maxs = np.amax(np.array(grad), axis=0)
+            grad = (grad - mins)/(maxs-mins)
+            grad[grad==float('inf')] = 0
+            
+            # 0 <= grad <= 1
+            prm = grad # shape: Nx4, 2D
             """
             # ================================
             #print("sè¦ºfè¦ºrr:", np.any(np.array ( np.logical_and(inputs.F.grad.cpu().detach()==1.0 , inputs.F.grad.cpu().detach())>0.0), axis=0) ) 
@@ -155,19 +177,20 @@ def main() -> None:
             #save the voxelized output and voxelized point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1
             out = outputs.cpu()
-            inp_pc = inputs.C.cpu()
-            
+            inp_pc = inputs.F.cpu() # input point cloud 
             # outputs.shape[0]x5, first 4 column is pc, last 1 column is output
             concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
             
-            #np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
+            np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
             np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), prm)
-    
+            
             output_dict = {
                 'outputs': outputs,
                 'targets': targets
             }
             trainer.after_step(output_dict)
+        else: 
+            break
         c += 1
     trainer.after_epoch()
 

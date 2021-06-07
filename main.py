@@ -168,107 +168,59 @@ def train_SPCNN(device):
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     loss = checkpoint['loss']
-    
     model.eval()
-
     """
-
-def box_center_to_corner(data):
-    # To return
-    corner_boxes = np.zeros((8, 3))
-
-    translation = data[3]
-    h, w, l = data[0], data[1], data[2]
-    rotation = data[4]
-
-    # Create a bounding box outline
-    bounding_box = np.array([
-        [-l/2, -l/2, l/2, l/2, -l/2, -l/2, l/2, l/2],
-        [w/2, -w/2, -w/2, w/2, w/2, -w/2, -w/2, w/2],
-        [0, 0, 0, 0, h, h, h, h]])
-
-    # Standard 3x3 rotation matrix around the Z axis
-
-    rotation_matrix = np.array([
-        [np.cos(rotation), -np.sin(rotation), 0.0],
-        [np.sin(rotation), np.cos(rotation), 0.0],
-        [0.0, 0.0, 1.0]])
-
-    # Repeat the [x, y, z] eight times
-    eight_points = np.tile(translation, (8, 1))
-
-    # Translate the rotated bounding box by the
-    # original center position to obtain the final box
-    #corner_box = np.dot(
-    #    rotation_matrix, bounding_box) + eight_points.transpose()
-    corner_box = bounding_box + eight_points.transpose()
-    return corner_box.transpose()
 
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    #train_basicCNN()
-    #train_SPCNN(device)
 
-    root = "/Users/ezgicakir/Downloads/examples"
+    root = "/Users/ezgicakir/Downloads/outputs_prm_from_train-3"
     filenames = os.listdir(root)
 
     for file in filenames:
         if 'prm' not in file and 'npy' in file:
-
             orig_pc_file = open (os.path.join(root_dir, data_train_path, file.replace('npy', 'bin')), 'rb')
             orig_pc = np.fromfile(orig_pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
             crm = np.load( os.path.join(root_dir, crm_train_path_pc, file)).astype(float)
 
+            label_file = os.path.join(root_dir, labels_path, file.replace('npy', 'txt'))
+            calibs = Calibration( os.path.join(root_dir, calib_train_path), file.replace('npy', 'txt'))
+            lines = read_labels( label_file)
             #pc_filename = file.split('.')[0] + '_pc.' + file.split('.')[-1]
             #pc = np.load( os.path.join(root, pc_filename)).astype(float)
 
             out = np.load( os.path.join(root, file)).astype(float)
             pc = out[:,0:4]
             out = out[:,4:5]
-            prm_naive_file = os.path.join(root, file.replace('.npy', '_prm_naive.npy'))
-            if not os.path.exists(prm_naive_file):
-                continue
-            prm_naive = np.load(prm_naive_file).astype(float)
+            #prm_naive_file = os.path.join(root, file.replace('.npy', '_prm_naive.npy'))
+            #if not os.path.exists(prm_naive_file):
+            #    continue
+            #prm_naive = np.load(prm_naive_file).astype(float)
 
             prm_file = os.path.join(root, file.replace('.npy', '_prm.npy'))
             if not os.path.exists(prm_file):
                 continue
             prm = np.load(prm_file).astype(float)
 
-            bboxes = []
-            label_file = os.path.join(root_dir, labels_path, file.replace('npy', 'txt'))
-            calibs = Calibration( os.path.join(root_dir, calib_train_path), file.replace('npy', 'txt'))
+            bboxes = get_bboxes(labels=lines, calibs=calibs)
 
-            lines = read_labels( label_file)
-            for data in lines:
-
-                if data['type'] != b'DontCare':
-
-                    h = data['h'] # box height
-                    w = data['w'] # box width
-                    l = data['l']  # box length (in meters)
-                    x = data['x']
-                    y = data['y']
-                    z = data['z']
-                    ry = data['rotation_y']
-                    xyz = calibs.project_rect_to_velo(np.array([[x,y,z]]))
-
-                    t = (xyz[0][0], xyz[0][1], xyz[0][2])  # location (x,y,z) in camera coord.
-                     # yaw angle (around Y-axis in camera coordinates) [-pi..pi]
-                    bbox = [h,w,l,t,ry]
-                    bboxes.extend(box_center_to_corner(bbox))
             print(os.path.join(root, file))
-
             png_name = file.replace('npy', 'png')
-
+            print(orig_pc)
+            print(pc)
             print("crm limits: ", np.max(crm), np.min(crm))
             print("output limits: ", np.max(out), np.min(out))
-            print("prm limits: ", np.max(prm), np.min(prm))
-            print("prm_naive limits: ", np.max(prm_naive), np.min(prm_naive))
-
+            #print("prm limits: ", np.max(prm[:,0:3]), np.min(prm[:,0:3]))
+            #print("prm limits: ", np.max(prm), np.min(prm))
+            #print("prm_naive limits: ", np.max(prm_naive), np.min(prm_naive))
+            print(np.argmax(prm, axis=0))
+            #print(prm[17314,0], prm[4294,1],prm[9984,2],prm[ 18585,3])
+            #prm = prm - np.min(prm[:,0:3])
+            print("prm limits: ", np.max(prm[:,0:3]), np.min(prm[:,0:3]))
             visualize_pointcloud( orig_pc, crm, bboxes, idx=0)
-            visualize_pointcloud( pc, out, bboxes , idx=0)
-            visualize_pointcloud( pc, prm, bboxes , idx=0, mult=100)
-            visualize_pointcloud( pc, prm_naive, bboxes , idx=0)
-
-    # See PyCharm help at https://www.jetbrains.com/help/pycharm/
+            visualize_pointcloud( pc, out, bboxes , mult= 10, idx=0)
+            #visualize_pointcloud( pc, prm, bboxes , idx=0, mult=1)
+            for i in range(3):
+                print(prm[:,i])
+                visualize_pointcloud( pc, prm[:,i], bboxes , idx=i, mult=1000)
+            #visualize_pointcloud( pc, prm_naive, bboxes , idx=0)

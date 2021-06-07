@@ -25,8 +25,8 @@ class SemanticKITTITrainer(Trainer):
     def _before_epoch(self) -> None:
         self.model.train()
         self.dataflow.sampler.set_epoch(self.epoch_num-1)
-        self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
-                self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
+        #self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
+        #        self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
 
     def _run_step(self, feed_dict: Dict[str, Any]) -> Dict[str, Any]:   
         _inputs = dict()
@@ -49,7 +49,7 @@ class SemanticKITTITrainer(Trainer):
             
         else:
             # outputs are got 1-by-1
-            
+            pass
             """
             #save the voxelized output and voxelized point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1
@@ -58,6 +58,7 @@ class SemanticKITTITrainer(Trainer):
             inp_pc = inputs.C.cpu()
             np.save( os.path.join(self.out_save_dir, filename.replace('.bin', '_pc.npy')), inp_pc)
             
+            """
             """
             #convertion from voxelized data to original size 
             invs = feed_dict['inverse_map']
@@ -75,6 +76,7 @@ class SemanticKITTITrainer(Trainer):
                 _targets.append(targets_mapped)
             outputs = torch.cat(_outputs, 0)
             targets = torch.cat(_targets, 0)
+            """
             """ 
             # save output after converting to original size
             for i in range(len(_outputs)):

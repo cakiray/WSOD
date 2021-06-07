@@ -192,13 +192,12 @@ class KITTIInternal:
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         labels_ = np.load( self.crm_pcs[index]).astype(float)
-        if 'train' in self.split:
-            # get the points only at front view
-            # (x,y,z,r) -> (forward, left, up, r)
-            front_idxs = block_[:,0]>=0
-            block_ = block_[front_idxs] 
-            labels_ = labels_[front_idxs]
-            
+    
+        # get the points only at front view
+        # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
+        front_idxs = block_[:,0]>=0
+        block_ = block_[front_idxs] 
+        labels_ = labels_[front_idxs]
             
         #print("\n name ", self.pcs[index].split('/')[-1])
         #print("\n original size ", block_.shape)
