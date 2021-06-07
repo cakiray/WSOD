@@ -9,20 +9,20 @@ train:
 
 dataset:
   name: kitti
-  root: gdrive/MyDrive/KITTI
-  data_path: /data_object_velodyne/training/velodyne
-  crm_path: /center_response_maps
-  num_points: 20000
-  voxel_size: 0.05
-  quantization_size: 3
+  root: /data
+  data_path: dataset/kitti/object/training/velodyne
+  crm_path: Ezgi/center_response_maps_c2_exp
+  num_points: 10000
+  voxel_size: 0.1
+  quantization_size: 4
   
-num_epochs: 1
-batch_size: 4
+num_epochs: 100
+batch_size: 2
 no_bn: false
 workers_per_gpu: 2
-best_model: gdrive/MyDrive/spvnas/best_model
-checkpoints: gdrive/MyDrive/spvnas/checkpoints
-outputs: gdrive/MyDrive/KITTI/outputs_w_prm_2
+best_model: best_model
+checkpoints: checkpoints
+outputs: outputs
 
 model:
   name: spvnas
@@ -32,7 +32,7 @@ criterion:
 
 optimizer:
   name: adam
-  lr: 1.0e-1
+  lr: 1.0e-2
   weight_decay: 1.0e-4
   momentum: 0.9
   nesterov: true
