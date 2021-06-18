@@ -68,10 +68,7 @@ def main() -> None:
 
 
     if 'spvnas' in args.name.lower():
-        if args.weights is not None:
-            model = spvnas_best(args.name, args.weights, configs)
-        else:
-            model = spvnas_specialized(args.name, configs.no_bn)
+        model = spvnas_specialized(args.name, configs.no_bn)
     elif 'spvcnn' in args.name.lower():
         model = spvcnn(args.name)
     elif 'mink' in args.name.lower():
@@ -79,7 +76,7 @@ def main() -> None:
     else:
         raise NotImplementedError
     model.change_last_layer(configs.data.num_classes)
-    print("\n\n=====model===\n\n",model)
+    #print("\n\n=====model===\n\n",model)
    
     #model = builder.make_model()
     model = torch.nn.parallel.DistributedDataParallel(
@@ -99,6 +96,10 @@ def main() -> None:
                                    num_workers=configs.workers_per_gpu,
                                    seed=configs.train.seed,
                                    out_save_dir=configs.outputs)
+                                   
+    if args.weights is not None:
+        trainer._load_state_dict(torch.load(args.weights))
+        
     trainer.train_with_defaults(
     dataflow['train'],
     num_epochs=configs.num_epochs,

@@ -14,6 +14,7 @@ import torch
 from numba import jit
 
 import cv2
+import open3d
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
 
@@ -104,6 +105,8 @@ class KITTIInternal:
             train_idxs = open( os.path.join(root, "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
+                if not os.path.exists(self.root + self.crm_path + '/%s.bin' % idx):
+                    print (idx)
                 self.pcs.append( self.root + self.data_path + '/%s.bin' % idx)
                 self.crm_pcs.append(self.root + self.crm_path + '/%s.npy' % idx)
         #elif split=="val":
@@ -116,6 +119,8 @@ class KITTIInternal:
             val_idxs.sort()
             for idx in val_idxs[:50]:
                 idx = idx.strip()
+                if not os.path.exists(self.root + self.crm_path + '/%s.bin' % idx):
+                    print (idx)
                 self.pcs.append(self.root + self.data_path + '/%s.bin' % idx)
                 self.crm_pcs.append(self.root + self.crm_path  + '/%s.npy' % idx)
         """elif split=='test':
@@ -123,64 +128,7 @@ class KITTIInternal:
             for name in files:
                 self.pcs.append(self.root + self.data_path + "/" + name)
         """
-        """
-        self.seqs = []
 
-            self.seqs = [
-                '00', '01', '02', '03', '04', '05', '06', '07', '09', '10'
-            ]
-            if self.google_mode or trainval:
-                self.seqs.append('08')
-            #if trainval is True:
-            #    self.seqs.append('08')
-        elif self.split == 'val':
-            self.seqs = ['08']
-        elif self.split == 'test':
-            self.seqs = [
-                '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
-                '21'
-            ]
-
-
-    for seq in self.seqs:
-            seq_files = sorted(
-                os.listdir(os.path.join(self.root, seq, 'velodyne')))
-            seq_files = [
-                os.path.join(self.root, seq, 'velodyne', x) for x in seq_files
-            ]
-            self.files.extend(seq_files)
-
-        #self.files = self.files[:40]
-        if self.sample_stride > 1:
-            self.files = self.files[::self.sample_stride]
-
-        reverse_label_name_mapping = {}
-        self.label_map = np.zeros(260)
-        cnt = 0
-        for label_id in label_name_mapping:
-            if label_id > 250:
-                if label_name_mapping[label_id].replace('moving-',
-                                                        '') in kept_labels:
-                    self.label_map[label_id] = reverse_label_name_mapping[
-                        label_name_mapping[label_id].replace('moving-', '')]
-                else:
-                    self.label_map[label_id] = 255
-            elif label_id == 0:
-                self.label_map[label_id] = 255
-            else:
-                if label_name_mapping[label_id] in kept_labels:
-                    self.label_map[label_id] = cnt
-                    reverse_label_name_mapping[
-                        label_name_mapping[label_id]] = cnt
-                    cnt += 1
-                else:
-                    self.label_map[label_id] = 255
-
-        self.reverse_label_name_mapping = reverse_label_name_mapping
-        self.num_classes = cnt
-        self.angle = 0.0
-        # print('There are %d classes.' % (cnt))
-        """
     def set_angle(self, angle):
         self.angle = angle
 
@@ -191,6 +139,19 @@ class KITTIInternal:
         
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
+        
+        if False:
+            pcd=open3d.open3d.geometry.PointCloud()
+            pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
+            #inlers contains the indexes of gorund points
+            plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
+                                                     ransac_n=100,
+                                                     num_iterations=1000)
+            ground_feature = np.ones(shape=(block_.shape[0],1))
+            ground_feature[inliers] = 0.0
+            
+            block_ = np.concatenate( (block_, ground_feature), axis=1)
+        
         labels_ = np.load( self.crm_pcs[index]).astype(float)
     
         # get the points only at front view
@@ -199,13 +160,6 @@ class KITTIInternal:
         block_ = block_[front_idxs] 
         labels_ = labels_[front_idxs]
             
-        #print("\n name ", self.pcs[index].split('/')[-1])
-        #print("\n original size ", block_.shape)
-        #with open(self.pcs[index], 'rb') as b:
-        #    block_ = np.fromfile(b, dtype=np.float32).reshape(-1, 4)
-        #print("block: ", block_)
-        #block = np.zeros_like(block_)
-        #block = block_
         """
         if 'train' in self.split:
             theta = np.random.uniform(0, 2 * np.pi)
@@ -226,25 +180,8 @@ class KITTIInternal:
             block[...] = block_[...]
             block[:, :3] = np.dot(block[:, :3], transform_mat)
         """
-        #block[:, 3] = block_[:, 3]
-        
         pc_ = np.round(block_[:, :3] / self.voxel_size)
         pc_ -= pc_.min(0, keepdims=1)
-        #inds = self.inds[index]
-
-        """
-        label_file = self.files[index].replace('velodyne', 'labels').replace(
-            '.bin', '.label')
-        if os.path.exists(label_file):
-            with open(label_file, 'rb') as a:
-                all_labels = np.fromfile(a, dtype=np.int32).reshape(-1)
-        else:
-            all_labels = np.zeros((pc_.shape[0])).astype(np.int32)
-
-        labels_ = self.label_map[all_labels & 0xFFFF].astype(
-            np.int64)  # semantic labels
-        inst_labels_ = (all_labels >> 16).astype(np.int64)  # instance labels
-        """
         feat_ = block_
 
         inds, labels, inverse_map = sparse_quantize(pc_,

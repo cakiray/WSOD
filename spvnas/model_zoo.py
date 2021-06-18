@@ -33,7 +33,7 @@ def download_url(url, model_dir='~/.torch/', overwrite=False):
         urlretrieve(url, cached_file)
     return cached_file
 
-def spvnas_best(net_id, weights, configs):
+def spvnas_best(net_id, configs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvnas_specialized/%s/' % net_id)
@@ -45,12 +45,6 @@ def spvnas_best(net_id, weights, configs):
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
     model.manual_select(net_config)
     model = model.determinize()
-    
-    dict_ = torch.load(weights)['model']
-    dict_correct_naming = dict()
-    for key in dict_:
-        dict_correct_naming[key.replace('module.','')] = dict_[key]
-    model.load_state_dict(dict_correct_naming)
     return model
 
 

@@ -5,6 +5,7 @@ import torch
 from torch import nn
 from torchpack.train import Trainer
 from torchpack.utils.typing import Optimizer, Scheduler
+#from modules.peak_stimulator import peak_stimulator, prm_backpropagation
 
 __all__ = ['SemanticKITTITrainer']
 
@@ -25,6 +26,8 @@ class SemanticKITTITrainer(Trainer):
     def _before_epoch(self) -> None:
         self.model.train()
         self.dataflow.sampler.set_epoch(self.epoch_num-1)
+        print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
+
         #self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
         #        self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
 
@@ -35,10 +38,10 @@ class SemanticKITTITrainer(Trainer):
                 _inputs[key] = value.cuda()
 
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
-        
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
+        self.model.module._recover()
         outputs = self.model(inputs) # voxelized output (N,1)
-        
+            
         if outputs.requires_grad:
             loss = self.criterion(outputs, targets)
             self.summary.add_scalar('loss', loss.item())
@@ -48,17 +51,7 @@ class SemanticKITTITrainer(Trainer):
             self.scheduler.step()
             
         else:
-            # outputs are got 1-by-1
             pass
-            """
-            #save the voxelized output and voxelized point cloud
-            filename = feed_dict['file_name'][0] # file is list with size 1
-            out = outputs.cpu()
-            np.save( os.path.join(self.out_save_dir, filename.replace('bin', 'npy')), out)
-            inp_pc = inputs.C.cpu()
-            np.save( os.path.join(self.out_save_dir, filename.replace('.bin', '_pc.npy')), inp_pc)
-            
-            """
             """
             #convertion from voxelized data to original size 
             invs = feed_dict['inverse_map']
@@ -77,21 +70,7 @@ class SemanticKITTITrainer(Trainer):
             outputs = torch.cat(_outputs, 0)
             targets = torch.cat(_targets, 0)
             """
-            """ 
-            # save output after converting to original size
-            for i in range(len(_outputs)):
-                filename = feed_dict['file_name'][i]
-                out = _outputs[i].cpu()
-                np.save( os.path.join(self.out_save_dir, filename.replace('bin', 'npy')), out)
-                #np.save( os.path.join(self.out_save_dir, filename.replace('bin', 'npy')), out)
-                
-            """
-            """print("label ",all_labels.F.shape)
-            print("inv input ",invs.C.shape)
-            print("out ",len(_outputs), _outputs[0].shape)
-            print("target ",len(targets), targets[0].shape)
-            print("save file ", feed_dict['file_name'])
-            """
+            
                 
         #print(torch.min(outputs.cpu()), torch.max(outputs.cpu()))
 
@@ -99,7 +78,7 @@ class SemanticKITTITrainer(Trainer):
 
     def _after_epoch(self) -> None:
         self.model.eval()
-        
+        print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
 
     def _state_dict(self) -> Dict[str, Any]:
         state_dict = dict()
