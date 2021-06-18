@@ -102,16 +102,14 @@ class KITTIInternal:
         self.pcs = []
         self.crm_pcs = []
         if split == 'train':
-            train_idxs = open( os.path.join(root, "train.txt") ).readlines()
+            train_idxs = open( os.path.join(root, self.data_path.split('/')[:-1] , "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
-                if not os.path.exists(self.root + self.crm_path + '/%s.bin' % idx):
-                    print (idx)
-                self.pcs.append( self.root + self.data_path + '/%s.bin' % idx)
-                self.crm_pcs.append(self.root + self.crm_path + '/%s.npy' % idx)
+                self.pcs.append( os.path.join( self.root, self.data_path , '/%s.bin' % idx) )
+                self.crm_pcs.append( os.path.join( self.root , self.crm_path , '/%s.npy' % idx) )
         #elif split=="val":
         elif split=="test":
-            val_idxs = open( os.path.join(root, "val.txt") ).readlines()
+            val_idxs = open( os.path.join(root, self.data_path.split('/')[:-1], "val.txt") ).readlines()
             #import random
             #test_idxs = random.sample(range(0, len(val_idxs)), 50)
             #for idx in test_idxs:
@@ -119,10 +117,8 @@ class KITTIInternal:
             val_idxs.sort()
             for idx in val_idxs[:50]:
                 idx = idx.strip()
-                if not os.path.exists(self.root + self.crm_path + '/%s.bin' % idx):
-                    print (idx)
-                self.pcs.append(self.root + self.data_path + '/%s.bin' % idx)
-                self.crm_pcs.append(self.root + self.crm_path  + '/%s.npy' % idx)
+                self.pcs.append( os.path.join( self.root , self.data_path , '/%s.bin' % idx) ) 
+                self.crm_pcs.append( os.path.join( self.root , self.crm_path  , '/%s.npy' % idx) )
         """elif split=='test':
             files = os.listdir(os.path.join(root, self.data_path) )
             for name in files:
