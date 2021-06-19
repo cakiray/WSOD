@@ -11,7 +11,7 @@ dataset:
   name: kitti
   root: /data
   data_path: dataset/kitti/object/training/velodyne
-  crm_path: Ezgi/center_response_maps_r3
+  crm_path: Ezgi/center_response_maps_r2
   num_points: 50000
   voxel_size: 0.05
   quantization_size: 3
