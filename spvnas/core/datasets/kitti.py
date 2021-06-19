@@ -102,14 +102,14 @@ class KITTIInternal:
         self.pcs = []
         self.crm_pcs = []
         if split == 'train':
-            train_idxs = open( os.path.join(root, self.data_path.split('/')[:-1] , "train.txt") ).readlines()
+            train_idxs = open( os.path.join(root, '/'.join(self.data_path.split('/')[:-1] ), "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
                 self.pcs.append( os.path.join( self.root, self.data_path , '/%s.bin' % idx) )
                 self.crm_pcs.append( os.path.join( self.root , self.crm_path , '/%s.npy' % idx) )
         #elif split=="val":
         elif split=="test":
-            val_idxs = open( os.path.join(root, self.data_path.split('/')[:-1], "val.txt") ).readlines()
+            val_idxs = open( os.path.join(root, '/'.join(self.data_path.split('/')[:-1]), "val.txt") ).readlines()
             #import random
             #test_idxs = random.sample(range(0, len(val_idxs)), 50)
             #for idx in test_idxs:
