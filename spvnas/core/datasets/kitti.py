@@ -106,6 +106,7 @@ class KITTIInternal:
             for idx in train_idxs:
                 idx = idx.strip()
                 self.pcs.append( os.path.join( self.root, self.data_path , '/%s.bin' % idx) )
+                
                 self.crm_pcs.append( os.path.join( self.root , self.crm_path , '/%s.npy' % idx) )
         #elif split=="val":
         elif split=="test":
@@ -207,7 +208,7 @@ class KITTIInternal:
             'targets': labels,
             'targets_mapped': labels_,
             'inverse_map': inverse_map,
-            'file_name': self.pcs[index].split('/')[-1]
+            'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
         }
 
 

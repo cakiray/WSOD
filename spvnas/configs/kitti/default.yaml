@@ -15,10 +15,13 @@ dataset:
   num_points: 50000
   voxel_size: 0.05
   quantization_size: 3
-  
+
+prm:
+  win_size: 5
+  peak_threshold: 0.5
+
 num_epochs: 100
 batch_size: 2
-no_bn: false
 workers_per_gpu: 2
 best_model: Ezgi/best_model
 checkpoints: Ezgi/checkpoints
@@ -26,6 +29,7 @@ outputs: Ezgi/outputs
 
 model:
   name: spvnas
+  no_bn: false
 
 criterion:
   name: mse
