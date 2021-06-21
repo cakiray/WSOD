@@ -11,18 +11,18 @@ dataset:
   name: kitti
   root: /data
   data_path: dataset/kitti/object/training/velodyne
-  crm_path: Ezgi/center_response_maps_r2
+  crm_path: Ezgi/center_response_map_r3
   num_points: 50000
   voxel_size: 0.05
   quantization_size: 3
   
-num_epochs: 100
+num_epochs: 50
 batch_size: 2
 no_bn: false
 workers_per_gpu: 2
-best_model: Ezgi/best_model
-checkpoints: Ezgi/checkpoints
-outputs: Ezgi/outputs
+best_model: /data/Ezgi/best_model
+checkpoints: /data/Ezgi/checkpoints
+outputs: /data/Ezgi/outputs
 
 model:
   name: spvnas

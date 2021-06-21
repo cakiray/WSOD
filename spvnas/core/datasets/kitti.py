@@ -105,8 +105,8 @@ class KITTIInternal:
             train_idxs = open( os.path.join(root, '/'.join(self.data_path.split('/')[:-1] ), "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
-                self.pcs.append( os.path.join( self.root, self.data_path , '/%s.bin' % idx) )
-                self.crm_pcs.append( os.path.join( self.root , self.crm_path , '/%s.npy' % idx) )
+                self.pcs.append( os.path.join( self.root, self.data_path , '%s.bin' % idx) )
+                self.crm_pcs.append( os.path.join( self.root , self.crm_path , '%s.npy' % idx) )
         #elif split=="val":
         elif split=="test":
             val_idxs = open( os.path.join(root, '/'.join(self.data_path.split('/')[:-1]), "val.txt") ).readlines()
@@ -115,10 +115,10 @@ class KITTIInternal:
             #for idx in test_idxs:
                 #idx = val_idxs[idx].strip()
             val_idxs.sort()
-            for idx in val_idxs[:50]:
+            for idx in val_idxs:
                 idx = idx.strip()
-                self.pcs.append( os.path.join( self.root , self.data_path , '/%s.bin' % idx) ) 
-                self.crm_pcs.append( os.path.join( self.root , self.crm_path  , '/%s.npy' % idx) )
+                self.pcs.append( os.path.join( self.root , self.data_path , '%s.bin' % idx) ) 
+                self.crm_pcs.append( os.path.join( self.root , self.crm_path  , '%s.npy' % idx) )
         """elif split=='test':
             files = os.listdir(os.path.join(root, self.data_path) )
             for name in files:
@@ -136,7 +136,7 @@ class KITTIInternal:
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         
-        if False:
+        if True:
             pcd=open3d.open3d.geometry.PointCloud()
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
             #inlers contains the indexes of gorund points
