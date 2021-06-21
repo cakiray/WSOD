@@ -207,7 +207,7 @@ class KITTIInternal:
             'targets': labels,
             'targets_mapped': labels_,
             'inverse_map': inverse_map,
-            'file_name': self.pcs[index].split('/')[-1]
+            'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
         }
 
 

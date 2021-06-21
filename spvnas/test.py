@@ -18,9 +18,11 @@ from torchpack.environ import auto_set_run_dir, set_run_dir
 from torchpack.utils.config import configs
 from torchpack.utils.logging import logger
 
-from core import builder
+from core import builder, utils
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE
+from core.modules.peak_stimulator import *
+from core.calibration import Calibration 
 
 from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best
 
@@ -46,7 +48,7 @@ def main() -> None:
         set_run_dir(args.run_dir)
 
     logger.info(' '.join([sys.executable] + sys.argv))
-    #logger.info(f'Experiment started: "{args.run_dir}".' + '\n' + f'{configs}')
+    logger.info(f'Experiment started: "{args.run_dir}".' + '\n' + f'{configs}')
 
     dataset = builder.make_dataset()
     dataflow = dict()
@@ -66,14 +68,14 @@ def main() -> None:
 
 
     if 'spvnas' in args.name.lower():
-        model = spvnas_best(args.name, args.weights, configs)
-    """elif 'spvcnn' in args.name.lower():
+        model = spvnas_specialized(args.name, configs.model.no_bn)
+    elif 'spvcnn' in args.name.lower():
         model = spvcnn(args.name)
     elif 'mink' in args.name.lower():
         model = minkunet(args.name)
     else:
         raise NotImplementedError
-    """
+    model.change_last_layer(configs.data.num_classes)
     #model = builder.make_model()
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
@@ -97,103 +99,99 @@ def main() -> None:
         SaverRestore(),
         MSE()
     ])
+    if args.weights is not None:
+        trainer._load_state_dict(torch.load(args.weights))
     callbacks._set_trainer(trainer)
     trainer.callbacks = callbacks
-    trainer.dataflow = dataflow['test']
-
+    
+    datatype = 'test'
+    trainer.dataflow = dataflow[datatype]
 
     trainer.before_train()
     trainer.before_epoch()
-
+    #model.module._patch()
     # important
     model.eval()
-    c=0
-    for feed_dict in tqdm(dataflow['train'], desc='eval'):
-        if c < 20:
-        #if True:
-            _inputs = dict()
-            for key, value in feed_dict.items():
-                if not 'name' in key:
-                    _inputs[key] = value.cuda()
-    
-            inputs = _inputs['lidar']
-            targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-            
-            inputs.F.requires_grad = True
-            outputs = model(inputs)
-            
-            # ===============================
-            # PRM paper to calculate gradient
-            grad_output = outputs.new_empty(outputs.size())
-            grad_output.zero_()
-            
-            # Set 1 to the max of predicted center points in gradient
-            grad_output[torch.argmax(outputs, dim=0),0] = 1
-            
-            if inputs.F.grad is not None: 
-                inputs.F.grad.zero_() # shape is Nx4 , 2D 
-                
-            # Calculate peak response maps backwarding the output
-            outputs.backward(grad_output, retain_graph=True)
-            #print("sè¦ºfè¦ºrr:", grad_output[torch.argmax(outputs, dim=0)] ) 
-            
-            grad = inputs.F.grad.detach().cpu() # Nx4
-            #grad = torch.sum(grad[:,0:2],1)
-            """grad = np.absolute(grad)
-            #normalize gradient
-            mins= np.amin(np.array(grad), axis=0)
-            maxs = np.amax(np.array(grad), axis=0)
-            grad = (grad-mins)/(maxs-mins)
-            grad[grad==float('inf')] = 0"""
-            
-            # 0 <= grad <= 1
-            prm = grad # shape: Nx4, 2D
-            #prm = grad.sum(1).clone().clamp(min=0)
-            # print(np.all( np.logical_and( np.array(grad)>=0.0, np.array(grad)<=1.0 ) )) #True, 
-            # ===============================
-            
-            # ===============================
-            # Naive way to calculate gradients
-            """
-            outputs.backward(torch.ones_like(outputs), retain_graph=True)
-            #prm = inputs.F.grad.detach().sum(1).clone().clamp(min=0).cpu() # shape: N, 1D
-            
-            grad = inputs.F.grad.detach().clone().cpu() # Nx4
-            
-            #normalize gradient
-            mins= np.amin(np.array(grad), axis=0)
-            maxs = np.amax(np.array(grad), axis=0)
-            grad = (grad - mins)/(maxs-mins)
-            grad[grad==float('inf')] = 0
-            
-            # 0 <= grad <= 1
-            prm = grad # shape: Nx4, 2D
-            """
-            # ================================
-            #print("sè¦ºfè¦ºrr:", np.any(np.array ( np.logical_and(inputs.F.grad.cpu().detach()==1.0 , inputs.F.grad.cpu().detach())>0.0), axis=0) ) 
-    
-            loss = criterion(outputs, targets)
-            print("loss: " , loss.item())
-            #save the voxelized output and voxelized point cloud
-            filename = feed_dict['file_name'][0] # file is list with size 1
-            out = outputs.cpu()
-            inp_pc = inputs.F.cpu() # input point cloud 
-            # outputs.shape[0]x5, first 4 column is pc, last 1 column is output
-            concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
-            
-            np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-            np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), prm)
-            
-            output_dict = {
+
+    miou = np.zeros(2) #miou is calculated by binary class (being pos, being nonpos values on PRM)
+    win_size = configs.prm.win_size # 5
+    peak_threshold =  configs.prm.peak_threshold # 0.5
+    count = 0 
+    print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
+
+    for feed_dict in tqdm(dataflow[datatype], desc='eval'):
+        _inputs = dict()
+        for key, value in feed_dict.items():
+            if not 'name' in key:
+                _inputs[key] = value.cuda()
+
+        inputs = _inputs['lidar']
+        targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
+        
+        # outputs are got 1-by-1
+        inputs.F.requires_grad = True
+        
+        outputs = model(inputs) # voxelized output (N,1)
+        loss = criterion(outputs, targets) 
+
+        # make outputs in shape [Batch_size, Channel_size, Data_size]
+        if len(outputs.size()) == 2:
+            outputs_bcn = outputs[None, : , :]
+        outputs_bcn = outputs_bcn.permute(0,2,1)
+        
+        # peak backpropagation
+        peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size, peak_filter=model.module.mean_filter)
+        #print( "backprop calling ", len(peak_list),aggregation)
+        
+        #peak_list: [0,0,indx], peak_responses=list of peak responses
+        peak_list, peak_responses = prm_backpropagation(inputs, outputs_bcn, peak_list, 
+                                                            peak_threshold=peak_threshold, normalize=False)
+        
+        #save the subsampled output and subsampled point cloud
+
+        filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
+        """
+        out = outputs.cpu() 
+        inp_pc = inputs.F.cpu() # input point cloud 
+        # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
+        concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
+        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
+        if len(peak_list) >0:    
+            for i in range(len(peak_responses)):
+                prm = peak_responses[i]
+                np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
+        """    
+        
+        #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
+        calib_file = os.path.join (configs.root, '/'.join(configs.data_path.split('/')[:-1]) , 'calibs', filename.replace('bin', 'txt'))
+        calibs = Calibration( calib_file )
+        #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
+        label_file = os.path.join (configs.root, '/'.join(configs.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
+        labels = read_labels( label_file)
+        #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
+        mask_gt_prm = utils.generate_car_masks(inputs.F[:,0:3], labels, calibs)
+
+        print(calib_file, label_file)
+        exit(0)
+        for i in range(len(peak_list)):
+            prm = peak_responses[i]
+            #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
+            mask_pred = utils.generate_prm_mask(prm)
+            ious = iou(mask_pred, mask_gt_prm, n_classes=2)
+            miou += ious
+            count += 1
+        
+        output_dict = {
                 'outputs': outputs,
                 'targets': targets
             }
-            trainer.after_step(output_dict)
-        else: 
-            break
-        c += 1
+       trainer.after_step(output_dict)
+
     trainer.after_epoch()
 
-
+    miou /= count
+    print(f"mIoU: {miou},\nTotal Number of PRMs: {count}")
+    
+    
 if __name__ == '__main__':
     main()
