@@ -21,7 +21,7 @@ from torchsparse.utils import sparse_collate_fn, sparse_quantize
 __all__ = ['KITTI']
 
 class KITTI(dict):
-    def __init__(self, root, data_path, crm_path, voxel_size,quantization_size, num_points, **kwargs):
+    def __init__(self, root, data_path, crm_path, voxel_size,quantization_size, num_points, input_channels, **kwargs):
         submit_to_server = kwargs.get('submit', False)
         sample_stride = kwargs.get('sample_stride', 1)
         google_mode = kwargs.get('google_mode', False)
@@ -35,6 +35,7 @@ class KITTI(dict):
                                   voxel_size,
                                   quantization_size,
                                   num_points,
+                                  input_channels,
                                   sample_stride=1,
                                   split='train',
                                   submit=True),
@@ -45,6 +46,7 @@ class KITTI(dict):
                                   voxel_size,
                                   quantization_size,
                                   num_points,
+                                  input_channels,
                                   sample_stride=1,
                                   split='test')
             })
@@ -57,6 +59,7 @@ class KITTI(dict):
                                   voxel_size,
                                   quantization_size,
                                   num_points,
+                                  input_channels,
                                   sample_stride=1,
                                   split='train',
                                   google_mode=google_mode),
@@ -67,6 +70,7 @@ class KITTI(dict):
                                   voxel_size,
                                   quantization_size,
                                   num_points,
+                                  input_channels,
                                   sample_stride=sample_stride,
                                   split='test')  #,
                 #'real_test': KITTIInternal(root, voxel_size, num_points, split='test')
@@ -81,6 +85,7 @@ class KITTIInternal:
                  voxel_size,
                  quantization_size,
                  num_points,
+                 input_channels,
                  split,
                  sample_stride=1,
                  submit=False,
@@ -96,6 +101,7 @@ class KITTIInternal:
         self.voxel_size = voxel_size
         self.quantization_size = quantization_size
         self.num_points = num_points
+        self.input_channels = input_channels
         self.sample_stride = sample_stride
         self.google_mode = google_mode
 
@@ -136,7 +142,7 @@ class KITTIInternal:
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         
-        if False:
+        if self.input_channels == 5:
             pcd=open3d.open3d.geometry.PointCloud()
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
             #inlers contains the indexes of gorund points

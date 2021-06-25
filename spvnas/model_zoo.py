@@ -33,14 +33,15 @@ def download_url(url, model_dir='~/.torch/', overwrite=False):
         urlretrieve(url, cached_file)
     return cached_file
 
-def spvnas_best(net_id, configs):
+def spvnas_best(net_id, configs, **kwargs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvnas_specialized/%s/' % net_id)
     ))
-    
+    input_channels = kwargs.get('input_channels', 4)
     model = SPVNAS(
         configs.data.num_classes,
+        input_channels = input_channels,
         macro_depth_constraint=1
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
     model.manual_select(net_config)
@@ -53,9 +54,10 @@ def spvnas_specialized(net_id, pretrained=True, no_bn=False, **kwargs):
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvnas_specialized/%s/' % net_id)
     ))
-
+    input_channels = kwargs.get('input_channels', 4)
     model = SPVNAS(
         net_config['num_classes'],
+        input_channels = input_channels,
         macro_depth_constraint=1,
         pres=net_config['pres'],
         vres=net_config['vres']
@@ -93,10 +95,11 @@ def spvnas_supernet(net_id, pretrained=True, **kwargs):
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvnas_supernet/%s/' % net_id)
     ))
-
+    input_channels = kwargs.get('input_channels', 4 )
 
     model = SPVNAS(
         net_config['num_classes'],
+        input_channels = input_channels,
         macro_depth_constraint=net_config['macro_depth_constraint'],
         pres=net_config['pres'],
         vres=net_config['vres']

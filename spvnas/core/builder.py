@@ -26,7 +26,8 @@ def make_dataset() -> Dataset:
                         crm_path=configs.dataset.crm_path,
                         num_points=configs.dataset.num_points,
                         voxel_size=configs.dataset.voxel_size,
-                        quantization_size=configs.dataset.quantization_size)
+                        quantization_size=configs.dataset.quantization_size,
+                        input_channels=configs.data.input_channels)
     else:
         raise NotImplementedError(configs.dataset.name)
     return dataset

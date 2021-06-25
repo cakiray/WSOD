@@ -35,7 +35,7 @@ class SPVNAS(RandomNet):
     num_down_stages = len(output_channels) // 2
     
     
-    def __init__(self, num_classes, macro_depth_constraint, **kwargs):
+    def __init__(self, num_classes, input_channels, macro_depth_constraint, **kwargs):
         super().__init__()
         self.pres = kwargs.get('pres', 0.05)
         self.vres = kwargs.get('vres', 0.05)
@@ -57,9 +57,7 @@ class SPVNAS(RandomNet):
         if 'output_channels_lb' in kwargs:
             self.output_channels_lb = kwargs['output_channels_lb']
         
-        self.input_channel = 4
-        if False:
-            self.input_channel = 5
+        self.input_channel = input_channels
         base_channels = self.base_channels
         output_channels = self.output_channels
         output_channels_lb = self.output_channels_lb
