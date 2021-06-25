@@ -109,7 +109,7 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    #model.module._patch()
+    model.module._patch()
     # important
     model.eval()
 
@@ -118,39 +118,41 @@ def main() -> None:
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count = 0 
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
-
+    c = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        _inputs = dict()
-        for key, value in feed_dict.items():
-            if not 'name' in key:
-                _inputs[key] = value.cuda()
+        if True:# c < 500:
+            c += 1
+            _inputs = dict()
+            for key, value in feed_dict.items():
+                if not 'name' in key:
+                    _inputs[key] = value.cuda()
 
-        inputs = _inputs['lidar']
-        targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
+            inputs = _inputs['lidar']
+            targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
         
         # outputs are got 1-by-1
-        inputs.F.requires_grad = True
+            inputs.F.requires_grad = True
         
-        outputs = model(inputs) # voxelized output (N,1)
-        loss = criterion(outputs, targets) 
+            outputs = model(inputs) # voxelized output (N,1)
+            loss = criterion(outputs, targets) 
 
         # make outputs in shape [Batch_size, Channel_size, Data_size]
-        if len(outputs.size()) == 2:
-            outputs_bcn = outputs[None, : , :]
-        outputs_bcn = outputs_bcn.permute(0,2,1)
+            if len(outputs.size()) == 2:
+                outputs_bcn = outputs[None, : , :]
+            outputs_bcn = outputs_bcn.permute(0,2,1)
         
         # peak backpropagation
-        peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size, peak_filter=model.module.mean_filter)
+            peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size, peak_filter=model.module.mean_filter)
         #print( "backprop calling ", len(peak_list),aggregation)
         
         #peak_list: [0,0,indx], peak_responses=list of peak responses
-        peak_list, peak_responses = prm_backpropagation(inputs, outputs_bcn, peak_list, 
+            peak_list, peak_responses = prm_backpropagation(inputs, outputs_bcn, peak_list, 
                                                             peak_threshold=peak_threshold, normalize=False)
         
         #save the subsampled output and subsampled point cloud
 
-        filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-        """
+            filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
+            """
         out = outputs.cpu() 
         inp_pc = inputs.F.cpu() # input point cloud 
         # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
@@ -160,32 +162,32 @@ def main() -> None:
             for i in range(len(peak_responses)):
                 prm = peak_responses[i]
                 np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-        """    
+            """    
         
         #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
-        calib_file = os.path.join (configs.root, '/'.join(configs.data_path.split('/')[:-1]) , 'calibs', filename.replace('bin', 'txt'))
-        calibs = Calibration( calib_file )
+            calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
+            calibs = Calibration( calib_file )
         #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
-        label_file = os.path.join (configs.root, '/'.join(configs.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
-        labels = read_labels( label_file)
+            label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
+            labels = utils.read_labels( label_file)
         #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
-        mask_gt_prm = utils.generate_car_masks(inputs.F[:,0:3], labels, calibs)
+            mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
 
-        print(calib_file, label_file)
-        exit(0)
-        for i in range(len(peak_list)):
-            prm = peak_responses[i]
-            #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
-            mask_pred = utils.generate_prm_mask(prm)
-            ious = iou(mask_pred, mask_gt_prm, n_classes=2)
-            miou += ious
-            count += 1
+        #print(calib_file, label_file)
         
-        output_dict = {
+            for i in range(len(peak_list)):
+                prm = np.asarray(peak_responses[i])
+            #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
+                mask_pred = utils.generate_prm_mask(prm)
+                ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+                miou += ious
+                count += 1
+        
+            output_dict = {
                 'outputs': outputs,
                 'targets': targets
             }
-       trainer.after_step(output_dict)
+            trainer.after_step(output_dict)
 
     trainer.after_epoch()
 
