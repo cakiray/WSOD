@@ -136,7 +136,7 @@ class KITTIInternal:
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         
-        if True:
+        if False:
             pcd=open3d.open3d.geometry.PointCloud()
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
             #inlers contains the indexes of gorund points

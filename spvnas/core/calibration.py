@@ -28,7 +28,7 @@ class Calibration(object):
         TODO(rqi): do matrix multiplication only once for each projection.
     '''
     def __init__(self, calib_filepath, idx=0, from_video=False):
-        if os.path.exist(calib_filepath):
+        if os.path.exists(calib_filepath):
             calibs = self.read_calib_file(calib_filepath)
         elif type(idx) == str:
             calibs = self.read_calib_file(os.path.join(calib_filepath, idx))

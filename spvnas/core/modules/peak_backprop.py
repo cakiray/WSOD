@@ -15,11 +15,7 @@ class PreHook(Function):
     @staticmethod
     def forward(ctx, input, offset):
         ctx.save_for_backward(input, offset)
-        """tensor = SparseTensor(input.F , input.C, input.s)
-        tensor.coord_maps = input.coord_maps
-        tensor.kernel_maps = input.kernel_maps
-        return tensor"""
-        return input.clone()
+        return input
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -31,11 +27,7 @@ class PostHook(Function):
     @staticmethod
     def forward(ctx, input, norm_factor):
         ctx.save_for_backward(norm_factor)
-        """tensor = SparseTensor(input.F , input.C, input.s)
-        tensor.coord_maps = input.coord_maps
-        tensor.kernel_maps = input.kernel_maps
-        return tensor"""
-        return input.clone()
+        return input
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -47,33 +39,28 @@ class PostHook(Function):
         return None, grad_input
 
 
-def pr_conv3d(self, input):
-    offset = input.F.min().detach()
-    input.F = PreHook.apply(input.F, offset) 
-    print("input ", input.F.shape)
-    print("kernel ", self.kernel.shape)
-    resp = spf.conv3d(inputs=input,
+def pr_conv3d(self, inputs):
+
+    offset = inputs.F.min().detach()    
+    inputs.F = PreHook.apply(inputs.F, offset) 
+    
+    resp = spf.conv3d(inputs=inputs,
                       kernel=self.kernel,
                       kernel_size=self.kernel_size,
                       bias=self.bias,
                       stride=self.stride,
                       dilation=self.dilation,
                       transpose=self.t).detach()
-    print("resp ", resp.F.shape)
-
-    pos_weight = F.relu(self.kernel).detach()
-    input.F = input.F-offset
     
-    print("pos_weight ", pos_weight.shape)
-    norm_factor = spf.conv3d(inputs=input, #- offset,
+    pos_weight = F.relu(self.kernel).detach()
+    inputs.F = inputs.F-offset
+    
+    norm_factor = spf.conv3d(inputs=inputs,
                              kernel=pos_weight,
                              kernel_size=self.kernel_size,
                              bias=None,
                              stride=self.stride,
                              dilation=self.dilation,
                              transpose=self.t)
-    input.F = PostHook.apply(resp.F, norm_factor.F)
-    print("norm_factor ", norm_factor.shape)
-    print("input ", input.F.shape)
-
-    return input
+    resp.F = PostHook.apply(resp.F, norm_factor.F)
+    return resp

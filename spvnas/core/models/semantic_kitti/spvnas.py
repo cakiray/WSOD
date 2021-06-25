@@ -183,14 +183,17 @@ class SPVNAS(RandomNet):
         
     
     def change_last_layer(self, num_classes):
+        trainable_layers = ['point_transforms.2', 'upsample.2', 'upsample.3']
         # Freeze model weights except point_transforms' third layers block
         for name, param in self.named_parameters():
-            #if 'point_transforms.2' not in name:
-            param.requires_grad = False
+            for layersname in trainable_layers: 
+                if  layersname not in name:
+                    param.requires_grad = False
 
         for name, module in self.named_modules():
-            #if 'point_transforms.2' not in name:
-            module.requires_grad_(False)
+            for layersname in trainable_layers:
+                if layersname not in name:
+                    module.requires_grad_(False)
         #self._modules['name']
         
         # change last classifier layer's output channel and make it trainable, by default
@@ -220,8 +223,8 @@ class SPVNAS(RandomNet):
     def _patch(self):
         for name,module in self.named_modules():
             if isinstance(module, spnn.Conv3d):
-                if len(module.kernel.shape)==3:
-                    print("in c & out c ", module.in_channels, module.out_channels)
+                if len(module.kernel.shape)>0:
+                    #print("in c & out c ", module.in_channels, module.out_channels)
                     module._original_forward = module.forward
                     module.forward = MethodType(pr_conv3d, module)
     

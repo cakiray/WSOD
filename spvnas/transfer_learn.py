@@ -68,7 +68,7 @@ def main() -> None:
 
 
     if 'spvnas' in args.name.lower():
-        model = spvnas_specialized(args.name, configs.no_bn)
+        model = spvnas_specialized(args.name, configs.model.no_bn)
     elif 'spvcnn' in args.name.lower():
         model = spvcnn(args.name)
     elif 'mink' in args.name.lower():

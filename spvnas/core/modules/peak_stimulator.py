@@ -58,7 +58,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     prm = None
-    print("max values in PRM: ", torch.max(outputs), torch.argmax(outputs))
+    # print("max and min values in PRM: ", torch.max(outputs), torch.min(outputs))
     
     valid_peak_list = []
     peak_response_maps = []
@@ -91,11 +91,12 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 grad[grad==float('inf')] = 0
 
             # PRM is absolute and sum of all channels
-            prm = np.absolute( grad ) # shape: Nx4, 2D
+            prm = grad.detach().cpu().clone()
+            prm = np.absolute( prm ) # shape: Nx4, 2D
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
-            prm = grad.sum(1).clone().detach().cpu()
-            peak_response_maps.append( prm / prm.sum() )
-            
+            prm = prm.sum(1)
+            #peak_response_maps.append( prm / prm.sum() )
+            peak_response_maps.append(prm)
             #valid_peak_list contains indexes of 2 dimensions of valid peaks in center response map
             valid_peak_list.append(peak_list[idx,:])
             i += 1
