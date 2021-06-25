@@ -19,13 +19,13 @@ dataset:
 num_epochs: 50
 prm:
   win_size: 5
-  peak_threshold: 0.5
+  peak_threshold: 0.3
 
-batch_size: 2
+batch_size: 1
 workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
-outputs: /data/Ezgi/outputs
+outputs: /data/Ezgi/outputs_r3_ch4
 
 model:
   name: spvnas
