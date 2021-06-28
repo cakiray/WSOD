@@ -4,7 +4,7 @@ import os
 import numpy as np
 from datetime import datetime
 from tqdm import tqdm
-
+import random
 import torch
 import torch.backends.cudnn
 import torch.cuda
@@ -49,7 +49,17 @@ def main() -> None:
     logger.info(f'Experiment started: "{args.run_dir}".' + '\n' + f'{configs}')
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%H:%M")
-    
+
+    # seed
+    if ('seed' not in configs.train) or (configs.train.seed is None):
+        configs.train.seed = torch.initial_seed() % (2**32 - 1)
+
+    seed = configs.train.seed + dist.rank() * configs.workers_per_gpu * configs.num_epochs
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
     dataset = builder.make_dataset()
     dataflow = dict()
     for split in dataset:

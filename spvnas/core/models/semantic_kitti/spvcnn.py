@@ -177,7 +177,7 @@ class SPVCNN(nn.Module):
                 nn.ReLU(True),
             )
         ])
-
+        self.relu = nn.LeakyReLU(negative_slope=0.1)
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
 
@@ -234,7 +234,7 @@ class SPVCNN(nn.Module):
         z3 = voxel_to_point(y4, z2)
         z3.F = z3.F + self.point_transforms[2](z2.F)
         out = self.classifier(z3.F)
-        
+        out = self.relu(out)
         return out
 
 
