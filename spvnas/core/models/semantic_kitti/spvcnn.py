@@ -181,6 +181,21 @@ class SPVCNN(nn.Module):
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
 
+    #modify conv3d layers so that they have prehook and posthook
+    # to get PRM nicer
+    def _patch(self):
+        for name,module in self.named_modules():
+            if isinstance(module, spnn.Conv3d):
+                if len(module.kernel.shape)>0:
+                    #print("in c & out c ", module.in_channels, module.out_channels)
+                    module._original_forward = module.forward
+                    module.forward = MethodType(pr_conv3d, module)
+
+    def _recover(self):
+        for module in self.modules():
+            if isinstance(module, spnn.Conv3d) and hasattr(module, '_original_forward'):
+                module.forward = module._original_forward
+
     def weight_initialization(self):
         for m in self.modules():
             if isinstance(m, nn.BatchNorm1d):
