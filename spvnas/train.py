@@ -19,7 +19,7 @@ from torchpack.utils.logging import logger
 
 from core import builder
 from core.trainers import SemanticKITTITrainer
-from core.callbacks import MeanIoU
+from core.callbacks import MeanIoU, MSE
 
 # torchpack dist-run -np 1 python train.py configs/kittti/default.yaml
 def main() -> None:
@@ -80,26 +80,28 @@ def main() -> None:
     optimizer = builder.make_optimizer(model)
     scheduler = builder.make_scheduler(optimizer)
 
+    from datetime import datetime
+    now = datetime.now()
+    dt_string = now.strftime("%d-%m-%H:%M")
+
     trainer = SemanticKITTITrainer(model=model,
-                          criterion=criterion,
-                          optimizer=optimizer,
-                          scheduler=scheduler,
-                          num_workers=configs.workers_per_gpu,
-                          seed=seed,
-                          out_save_dir=configs.out_save_dir)
+                               criterion=criterion,
+                               optimizer=optimizer,
+                               scheduler=scheduler,
+                               num_workers=configs.workers_per_gpu,
+                               seed=configs.train.seed,
+                               out_save_dir=configs.outputs)
     trainer.train_with_defaults(
         dataflow['train'],
         num_epochs=configs.num_epochs,
-        callbacks=[
-            InferenceRunner(
-                dataflow[split],
-                callbacks=[MeanSquaredError(name=f'mse/{split}')])
-            for split in ['test']
-        ] + [
-            MinSaver(scalar='mse/test', save_dir=configs.save_dir ),
-            Saver(save_dir=configs.save_dir_2),
-        ])
-
+        callbacks=[InferenceRunner(
+            dataflow[split],
+            callbacks=[MSE(name=f'mse/{split}')])
+                      for split in ['test']
+                  ] + [
+                      MinSaver(scalar='mse/test',name=dt_string, save_dir=configs.best_model ),
+                      Saver(save_dir=configs.checkpoints),
+                  ])
 
 if __name__ == '__main__':
     main()
