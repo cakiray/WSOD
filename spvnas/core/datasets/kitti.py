@@ -12,9 +12,7 @@ import scipy.interpolate
 import scipy.ndimage
 import torch
 from numba import jit
-
 import cv2
-import open3d
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
 
@@ -108,23 +106,18 @@ class KITTIInternal:
         self.pcs = []
         self.crm_pcs = []
         if split == 'train':
-            train_idxs = open( os.path.join(root, '/'.join(self.data_path.split('/')[:-1] ), "train.txt") ).readlines()
+            train_idxs = open( os.path.join(root, "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
-                self.pcs.append( os.path.join( self.root, self.data_path , '%s.bin' % idx) )
-                self.crm_pcs.append( os.path.join( self.root , self.crm_path , '%s.npy' % idx) )
+                self.pcs.append( self.root + self.data_path + '/%s.bin' % idx)
+                self.crm_pcs.append(self.root + self.crm_path + '/%s.npy' % idx)
         #elif split=="val":
         elif split=="test":
-            val_idxs = open( os.path.join(root, '/'.join(self.data_path.split('/')[:-1]), "val.txt") ).readlines()
-            #import random
-            #test_idxs = random.sample(range(0, len(val_idxs)), 50)
-            #for idx in test_idxs:
-                #idx = val_idxs[idx].strip()
-            val_idxs.sort()
-            for idx in val_idxs:
+            val_idxs = open( os.path.join(root, "val.txt") ).readlines()
+            for idx in val_idxs[:20]:
                 idx = idx.strip()
-                self.pcs.append( os.path.join( self.root , self.data_path , '%s.bin' % idx) ) 
-                self.crm_pcs.append( os.path.join( self.root , self.crm_path  , '%s.npy' % idx) )
+                self.pcs.append(self.root + self.data_path + '/%s.bin' % idx)
+                self.crm_pcs.append(self.root + self.crm_path  + '/%s.npy' % idx)
         """elif split=='test':
             files = os.listdir(os.path.join(root, self.data_path) )
             for name in files:
@@ -155,13 +148,13 @@ class KITTIInternal:
             block_ = np.concatenate( (block_, ground_feature), axis=1)
         
         labels_ = np.load( self.crm_pcs[index]).astype(float)
-    
-        # get the points only at front view
-        # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
-        front_idxs = block_[:,0]>=0
-        block_ = block_[front_idxs] 
-        labels_ = labels_[front_idxs]
-            
+        if 'train' in self.split:
+            # get the points only at front view
+            # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
+            front_idxs = block_[:,0]>=0
+            block_ = block_[front_idxs] 
+            labels_ = labels_[front_idxs]
+                
         """
         if 'train' in self.split:
             theta = np.random.uniform(0, 2 * np.pi)
