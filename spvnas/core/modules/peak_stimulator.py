@@ -58,7 +58,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     prm = None
-    # print("max and min values in PRM: ", torch.max(outputs), torch.min(outputs))
+    #print("max and min values in PRM: ", torch.max(outputs), torch.min(outputs))
     
     valid_peak_list = []
     peak_response_maps = []
