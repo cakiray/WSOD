@@ -26,6 +26,8 @@ class SemanticKITTITrainer(Trainer):
     def _before_epoch(self) -> None:
         self.model.train()
         self.dataflow.sampler.set_epoch(self.epoch_num-1)
+        self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
+                self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
         print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
 
         #self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
@@ -39,7 +41,7 @@ class SemanticKITTITrainer(Trainer):
 
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-        self.model.module._recover()
+        #self.model.module._recover()
         outputs = self.model(inputs) # voxelized output (N,1)
             
         if outputs.requires_grad:
@@ -49,10 +51,8 @@ class SemanticKITTITrainer(Trainer):
             loss.backward()
             self.optimizer.step()
             self.scheduler.step()
-            
         else:
-            pass
-            """
+            
             #convertion from voxelized data to original size 
             invs = feed_dict['inverse_map']
             all_labels = feed_dict['targets_mapped']
@@ -68,10 +68,7 @@ class SemanticKITTITrainer(Trainer):
                 _outputs.append(outputs_mapped)
                 _targets.append(targets_mapped)
             outputs = torch.cat(_outputs, 0)
-            targets = torch.cat(_targets, 0)
-            """
-            
-                
+            targets = torch.cat(_targets, 0)                
         #print(torch.min(outputs.cpu()), torch.max(outputs.cpu()))
 
         return {'outputs': outputs, 'targets': targets}

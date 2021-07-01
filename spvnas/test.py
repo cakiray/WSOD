@@ -68,14 +68,14 @@ def main() -> None:
 
 
     if 'spvnas' in args.name.lower():
-        model = spvnas_specialized(args.name, configs.model.no_bn, input_channels=configs.data.input_channels)
+        model = spvnas_best(args.name, args.weights, configs)    
     elif 'spvcnn' in args.name.lower():
         model = spvcnn(args.name)
     elif 'mink' in args.name.lower():
         model = minkunet(args.name)
     else:
         raise NotImplementedError
-    model.change_last_layer(configs.data.num_classes)
+    #model.change_last_layer(configs.data.num_classes)
     #model = builder.make_model()
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
@@ -109,7 +109,7 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    model.module._patch()
+    #model.module._patch()
     # important
     model.eval()
 
@@ -153,15 +153,15 @@ def main() -> None:
 
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             """
-        out = outputs.cpu() 
-        inp_pc = inputs.F.cpu() # input point cloud 
-        # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
-        concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
-        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-        if len(peak_list) >0:    
-            for i in range(len(peak_responses)):
-                prm = peak_responses[i]
-                np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
+            out = outputs.cpu() 
+            inp_pc = inputs.F.cpu() # input point cloud 
+            # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
+            concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
+            np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
+            if len(peak_list) >0:    
+                for i in range(len(peak_responses)):
+                    prm = peak_responses[i]
+                    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
             """    
         
         #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs

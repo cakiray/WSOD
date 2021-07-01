@@ -218,14 +218,8 @@ class ConvolutionBlock(nn.Module):
         cur_kernel = cur_kernel[..., torch.arange(self.outc)]
         self.net.conv.kernel.data = cur_kernel
         self.net.bn.weight.data = nas_module.net.bn.bn.weight[:self.outc]
-        self.net.bn.running_var.data = nas_module.net.bn.bn.running_var[:
-                                                                           self
-                                                                           .
-                                                                           outc]
-        self.net.bn.running_mean.data = nas_module.net.bn.bn.running_mean[:
-                                                                             self
-                                                                             .
-                                                                             outc]
+        self.net.bn.running_var.data = nas_module.net.bn.bn.running_var[:self.outc]
+        self.net.bn.running_mean.data = nas_module.net.bn.bn.running_mean[:self.outc]
         self.net.bn.bias.data = nas_module.net.bn.bn.bias[:self.outc]
         self.net.bn.num_batches_tracked.data = nas_module.net.bn.bn.num_batches_tracked
 
