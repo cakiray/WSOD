@@ -21,7 +21,7 @@ from core import builder
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE
 
-from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best
+from model_zoo import spvnas_specialized, minkunet, spvcnn
 
 def main() -> None:
     dist.init()
@@ -49,7 +49,7 @@ def main() -> None:
     logger.info(f'Experiment started: "{args.run_dir}".' + '\n' + f'{configs}')
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%H:%M")
-
+    """
     # seed
     if ('seed' not in configs.train) or (configs.train.seed is None):
         configs.train.seed = torch.initial_seed() % (2**32 - 1)
@@ -59,7 +59,7 @@ def main() -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-
+    """
     dataset = builder.make_dataset()
     dataflow = dict()
     for split in dataset:
@@ -78,7 +78,7 @@ def main() -> None:
 
 
     if 'spvnas' in args.name.lower():
-        model = spvnas_specialized(args.name, configs.model.no_bn)
+        model = spvnas_specialized(args.name)
     elif 'spvcnn' in args.name.lower():
         model = spvcnn(args.name)
     elif 'mink' in args.name.lower():

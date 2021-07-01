@@ -61,7 +61,7 @@ class SPVNAS(RandomNet):
         base_channels = self.base_channels
         output_channels = self.output_channels
         output_channels_lb = self.output_channels_lb
-        no_bn = kwargs.get('no_bn', False)
+        no_bn = False#kwargs.get('no_bn', False)
         self.stem = nn.Sequential(
             spnn.Conv3d(self.input_channel, base_channels, kernel_size=3, stride=1),
             spnn.BatchNorm(base_channels), 
@@ -181,7 +181,7 @@ class SPVNAS(RandomNet):
         
     
     def change_last_layer(self, num_classes):
-        trainable_layers = ['point_transforms.2', 'upsample.2', 'upsample.3']
+        """trainable_layers = ['point_transforms.2', 'upsample.2', 'upsample.3']
         # Freeze model weights except point_transforms' third layers block
         for name, param in self.named_parameters():
             for layersname in trainable_layers: 
@@ -193,7 +193,14 @@ class SPVNAS(RandomNet):
                 if layersname not in name:
                     module.requires_grad_(False)
         #self._modules['name']
-        
+        """
+        # Freeze model weights except point_transforms' third layers block
+        for name, param in self.named_parameters():
+            #if 'point_transforms.2' not in name:
+            param.requires_grad = False
+        for name, module in self.named_modules():
+            #if 'point_transforms.2' not in name:
+            module.requires_grad_(False)
         # change last classifier layer's output channel and make it trainable, by default
         self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
         self.classifier.set_output_channel(num_classes)
@@ -390,7 +397,7 @@ class SPVNAS(RandomNet):
         
         x0 = self.stem(x0)
         z0 = voxel_to_point(x0, z)
-        z0.F = z0.F  #+ self.point_transforms[0](z.F)s
+        z0.F = z0.F  #+ self.point_transforms[0](z.F)
         x1 = point_to_voxel(x0, z0)
         x1 = self.downsample[0](x1)
         x2 = self.downsample[1](x1)
