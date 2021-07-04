@@ -41,7 +41,7 @@ class SemanticKITTITrainer(Trainer):
 
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-        #self.model.module._recover()
+        self.model.module._recover()
         outputs = self.model(inputs) # voxelized output (N,1)
             
         if outputs.requires_grad:
@@ -52,8 +52,7 @@ class SemanticKITTITrainer(Trainer):
             self.optimizer.step()
             self.scheduler.step()
         else:
-            
-            #convertion from voxelized data to original size 
+            #convertion from voxelized data to original size
             invs = feed_dict['inverse_map']
             all_labels = feed_dict['targets_mapped']
             _outputs = []
@@ -75,7 +74,6 @@ class SemanticKITTITrainer(Trainer):
 
     def _after_epoch(self) -> None:
         self.model.eval()
-        print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
 
     def _state_dict(self) -> Dict[str, Any]:
         state_dict = dict()
