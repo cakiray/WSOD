@@ -10,6 +10,7 @@ import torch.backends.cudnn
 import torch.cuda
 import torch.nn
 import torch.utils.data
+from torch.utils.tensorboard import SummaryWriter
 from torchpack import distributed as dist
 from torchpack.callbacks import (InferenceRunner, MaxSaver,
                                  Saver, SaverRestore, Callbacks)
@@ -109,7 +110,7 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    #model.module._patch()
+    model.module._patch()
     # important
     model.eval()
 
@@ -130,27 +131,26 @@ def main() -> None:
             inputs = _inputs['lidar']
             targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
         
-        # outputs are got 1-by-1
+            # outputs are got 1-by-1
             inputs.F.requires_grad = True
         
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets) 
 
-        # make outputs in shape [Batch_size, Channel_size, Data_size]
+            # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
             outputs_bcn = outputs_bcn.permute(0,2,1)
         
-        # peak backpropagation
+            # peak backpropagation
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size, peak_filter=model.module.mean_filter)
-        #print( "backprop calling ", len(peak_list),aggregation)
+            #print( "backprop calling ", len(peak_list),aggregation)
         
-        #peak_list: [0,0,indx], peak_responses=list of peak responses
+            #peak_list: [0,0,indx], peak_responses=list of peak responses
             peak_list, peak_responses = prm_backpropagation(inputs, outputs_bcn, peak_list, 
                                                             peak_threshold=peak_threshold, normalize=False)
         
-        #save the subsampled output and subsampled point cloud
-
+            #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             
             out = outputs.cpu() 
@@ -164,20 +164,20 @@ def main() -> None:
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
                 
         
-        #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
+            #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
-        #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
+            #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
-        #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
+            #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
             mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
 
-        #print(calib_file, label_file)
+            #print(calib_file, label_file)
         
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
-            #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
+                #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 mask_pred = utils.generate_prm_mask(prm)
                 ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                 miou += ious
@@ -193,7 +193,9 @@ def main() -> None:
 
     miou /= count
     print(f"mIoU: {miou},\nTotal Number of PRMs: {count}")
-    
-    
+
+    writer = SummaryWriter(configs.tfevent+configs.tfeventname)
+    writer.add_scalar("prm_mIoU", miou)
+
 if __name__ == '__main__':
     main()
