@@ -116,7 +116,7 @@ class KITTIInternal:
         #elif split=="val":
         elif split=="test":
             val_idxs = open( os.path.join(root, txt_path, "val.txt") ).readlines()
-            for idx in val_idxs[:20]:
+            for idx in val_idxs:
                 idx = idx.strip()
                 self.pcs.append(os.path.join(self.root, self.data_path, '%s.bin' % idx))
                 self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
