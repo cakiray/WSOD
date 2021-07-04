@@ -103,21 +103,23 @@ class KITTIInternal:
         self.sample_stride = sample_stride
         self.google_mode = google_mode
 
+        txt_path = '/'.join(self.data_path.split('/')[:-1])
         self.pcs = []
         self.crm_pcs = []
         if split == 'train':
-            train_idxs = open( os.path.join(root, "train.txt") ).readlines()
+            train_idxs = open( os.path.join(root, txt_path, "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
-                self.pcs.append( self.root + self.data_path + '/%s.bin' % idx)
-                self.crm_pcs.append(self.root + self.crm_path + '/%s.npy' % idx)
+                self.pcs.append(os.path.join( self.root, self.data_path ,'%s.bin' % idx))
+                
+                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
         #elif split=="val":
         elif split=="test":
-            val_idxs = open( os.path.join(root, "val.txt") ).readlines()
+            val_idxs = open( os.path.join(root, txt_path, "val.txt") ).readlines()
             for idx in val_idxs[:20]:
                 idx = idx.strip()
-                self.pcs.append(self.root + self.data_path + '/%s.bin' % idx)
-                self.crm_pcs.append(self.root + self.crm_path  + '/%s.npy' % idx)
+                self.pcs.append(os.path.join(self.root, self.data_path, '%s.bin' % idx))
+                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
         """elif split=='test':
             files = os.listdir(os.path.join(root, self.data_path) )
             for name in files:

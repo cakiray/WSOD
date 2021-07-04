@@ -27,7 +27,7 @@ batch_norm: false
 workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
-outputs: /data/Ezgi/outputs_r3_ch4
+outputs: /data/Ezgi/outputs_r2
 
 model:
   name: spvnas

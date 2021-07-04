@@ -33,7 +33,7 @@ def download_url(url, model_dir='~/.torch/', overwrite=False):
         urlretrieve(url, cached_file)
     return cached_file
 
-def spvnas_best(net_id, ,weights, configs, **kwargs):
+def spvnas_best(net_id, weights, configs, **kwargs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvnas_specialized/%s/' % net_id)
