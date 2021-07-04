@@ -12,7 +12,7 @@ import torch.nn
 import torch.utils.data
 from torchpack import distributed as dist
 from torchpack.callbacks import (InferenceRunner, MaxSaver, MinSaver,
-                                 Saver, SaverRestore, Callbacks)
+                                 Saver, SaverRestore, Callbacks, TFEventWriter)
 from torchpack.environ import auto_set_run_dir, set_run_dir
 from torchpack.utils.config import configs
 from torchpack.utils.logging import logger
@@ -98,7 +98,6 @@ def main() -> None:
     optimizer = builder.make_optimizer(model)
     scheduler = builder.make_scheduler(optimizer)
 
-
     trainer = SemanticKITTITrainer(model=model,
                                    criterion=criterion,
                                    optimizer=optimizer,
@@ -118,8 +117,9 @@ def main() -> None:
                       callbacks=[MSE(name=f'mse/{split}')])
                   for split in ['test']
               ] + [
-                  MinSaver(scalar='mse/test',name=dt_string, save_dir=configs.best_model ),
+                  MinSaver(scalar='mse/test', name=dt_string, save_dir=configs.best_model ),
                   Saver(save_dir=configs.checkpoints),
+                  TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
               ])
 
 

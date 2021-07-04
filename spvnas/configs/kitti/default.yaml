@@ -27,6 +27,8 @@ batch_norm: false
 workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
+tfevent: /data/Ezgi/runs
+tfeventname: /lr0,1-r2
 outputs: /data/Ezgi/outputs_r2
 
 model:
