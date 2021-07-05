@@ -114,7 +114,7 @@ def main() -> None:
     # important
     model.eval()
 
-    miou = np.zeros(4,2) #miou is calculated by binary class (being pos, being nonpos values on PRM)
+    miou = np.zeros(shape=(4,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count = 0 
@@ -180,7 +180,7 @@ def main() -> None:
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned
                 if prm.shape[1] >1:
-                    ious = np.zeros(4,2)
+                    ious = np.zeros(shape=(4,2))
                     for col in prm.shape[1]:
                         mask_pred = utils.generate_prm_mask(prm[:,col])
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
