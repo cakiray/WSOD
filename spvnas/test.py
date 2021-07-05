@@ -114,7 +114,7 @@ def main() -> None:
     # important
     model.eval()
 
-    miou = np.zeros(2) #miou is calculated by binary class (being pos, being nonpos values on PRM)
+    miou = np.zeros(4,2) #miou is calculated by binary class (being pos, being nonpos values on PRM)
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count = 0 
@@ -152,7 +152,7 @@ def main() -> None:
         
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            
+            """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
@@ -163,7 +163,7 @@ def main() -> None:
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
                 
-        
+            """
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -178,9 +178,18 @@ def main() -> None:
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
-                mask_pred = utils.generate_prm_mask(prm)
-                ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                miou += ious
+
+                if prm.shape[1] >1:
+                    ious = np.zeros(4,2)
+                    for col in prm.shape[1]:
+                        mask_pred = utils.generate_prm_mask(prm[:,col])
+                        iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+                        ious[col] = iou_col
+                    miou += ious
+                else:
+                    mask_pred = utils.generate_prm_mask(prm)
+                    ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+                    miou += ious
                 count += 1
         
             output_dict = {
@@ -195,7 +204,10 @@ def main() -> None:
     print(f"mIoU: {miou},\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
-    writer.add_scalar("prm_mIoU", miou)
+    for r,miou_col in enumerate(miou):
+        writer.add_scalar("prm_mIoU_%d_pos"%r, miou[1])
+        writer.add_scalar("prm_mIoU_%d_neg"%r, miou[0])
+
 
 if __name__ == '__main__':
     main()
