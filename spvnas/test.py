@@ -184,13 +184,17 @@ def main() -> None:
                     for col in range(prm.shape[1]):
                         mask_pred = utils.generate_prm_mask(prm[:,col])
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-
                         ious[col] = iou_col
-                    miou += ious
+                    
+                    if not np.isnan(np.sum(ious)):    
+                        miou += ious
+
                 else: # If sum of channels is detected
                     mask_pred = utils.generate_prm_mask(prm)
                     ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                    miou += ious
+                    
+                    if not np.isnan(np.sum(ious)):    
+                        miou += ious
                 count += 1
 
             # If there is no peak detected
@@ -202,13 +206,13 @@ def main() -> None:
                         mask_pred = np.zeros_like(mask_gt_prm)
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                         ious[col] = iou_col
-                        print("col",ious[col])
-                    print("iouts",ious)
-                    miou += ious
+                    if not np.isnan(np.sum(ious)):
+                        miou += ious
                 else: # If sum of channels is detected
                     mask_pred = np.zeros_like(mask_gt_prm)
                     ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                    miou += ious
+                    if not np.any(np.sum(ious)):
+                        miou += ious
                 count += 1
 
             output_dict = {
@@ -219,7 +223,7 @@ def main() -> None:
         else:
             break
     trainer.after_epoch()
-    print("miou",miou)
+    
     miou /= count
     print(f"mIoU:\n\t{miou},\nTotal Number of PRMs: {count}")
 
