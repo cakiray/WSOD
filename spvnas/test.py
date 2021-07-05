@@ -121,7 +121,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     c = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if True:# c < 500:
+        if True:#c < 3:
             c += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -201,26 +201,29 @@ def main() -> None:
                         mask_pred = np.zeros_like(mask_gt_prm)
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                         ious[col] = iou_col
+                    miou += ious
                 else: # If sum of channels is detected
                     mask_pred = np.zeros_like(mask_gt_prm)
                     ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                     miou += ious
+                count += 1
 
             output_dict = {
                 'outputs': outputs,
                 'targets': targets
             }
             trainer.after_step(output_dict)
-
+        else:
+            break
     trainer.after_epoch()
-
+    
     miou /= count
-    print(f"mIoU: {miou},\nTotal Number of PRMs: {count}")
+    print(f"mIoU:\n\t{miou},\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
-        writer.add_scalar("prm_mIoU_%d_pos"%r, miou[1])
-        writer.add_scalar("prm_mIoU_%d_neg"%r, miou[0])
+        writer.add_scalar("prm_mIoU_pos", miou_col[1], r)
+        writer.add_scalar("prm_mIoU_neg", miou_col[0], r)
 
 
 if __name__ == '__main__':
