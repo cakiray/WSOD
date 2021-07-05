@@ -197,7 +197,7 @@ def main() -> None:
                 # If each channel of peaks are returned, shape=(N,4)
                 if len(miou.shape)==2:
                     ious = np.zeros(shape=(4,2))
-                    for col in range(miou.shape[1]):
+                    for col in range(miou.shape[0]):
                         mask_pred = np.zeros_like(mask_gt_prm)
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                         ious[col] = iou_col
