@@ -222,8 +222,8 @@ def main() -> None:
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
-        writer.add_scalar("prm_mIoU_pos", miou_col[1], r)
-        writer.add_scalar("prm_mIoU_neg", miou_col[0], r)
+        writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
+        writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
 
 
 if __name__ == '__main__':
