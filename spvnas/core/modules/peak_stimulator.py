@@ -94,21 +94,13 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             prm = grad.detach().cpu().clone()
             prm = np.absolute( prm ) # shape: Nx4, 2D
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
-            prm = prm.sum(1)
+            #prm = prm.sum(1) # sums columns
             #peak_response_maps.append( prm / prm.sum() )
             peak_response_maps.append(prm)
             #valid_peak_list contains indexes of 2 dimensions of valid peaks in center response map
             valid_peak_list.append(peak_list[idx,:])
             i += 1
-            # ===============================
-            # Naive way to calculate gradients
-            """
-            outputs.backward(torch.ones_like(outputs), retain_graph=True)
-            #prm = inputs.F.grad.detach().sum(1).clone().clamp(min=0).cpu() # shape: N, 1D
-            grad = inputs.F.grad.detach().clone().cpu() # Nx4
-            prm = grad # shape: Nx4, 2D
-            """
-            # ================================
+
     #print("i ", i)
     if len(peak_response_maps) >0:
         # shape = len(valid_peak_list), 2
