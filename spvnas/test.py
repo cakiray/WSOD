@@ -178,10 +178,10 @@ def main() -> None:
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
-                # If each channel of peaks are returned
+                # If each channel of peaks are returned, shape=(N,4)
                 if prm.shape[1] >1:
                     ious = np.zeros(shape=(4,2))
-                    for col in prm.shape[1]:
+                    for col in range(prm.shape[1]):
                         mask_pred = utils.generate_prm_mask(prm[:,col])
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                         ious[col] = iou_col
@@ -194,8 +194,8 @@ def main() -> None:
 
             # If there is no peak detected
             if len(peak_list) == 0:
-                # If each channel of peaks are returned
-                for col in miou.shape[1]:
+                # If each channel of peaks are returned, shape=(N,4)
+                for col in range(miou.shape[1]):
                     mask_pred = np.zeros_like(mask_gt_prm)
                     iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                     ious[col] = iou_col
