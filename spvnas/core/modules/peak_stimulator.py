@@ -107,10 +107,11 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         valid_peak_list = torch.stack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
         # peak responses of each valid peak list is concatanated vertically
         # shape = (len(valid_peak_list) * number_of_points_in_scene), channel_no_of_grad
-        peak_response_maps_con = torch.cat(peak_response_maps, 0)
+        #peak_response_maps_con = torch.cat(peak_response_maps, 0)
+        peak_response_maps_con = sum(peak_response_maps)
         #print("# of peak responses and shape ", len(peak_response_maps), valid_peak_list.shape, peak_response_maps[0].shape)
         
-    return valid_peak_list, peak_response_maps
+    return valid_peak_list, peak_response_maps, peak_response_maps_con
         
 def peak_backpropagation_max(inputs, outputs, normalize=False):
     # PRM paper to calculate gradient
