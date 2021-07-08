@@ -178,7 +178,7 @@ def main() -> None:
                 if peak_response_maps_sum.shape[1]>1:
                     ious = np.zeros(shape=(4,2))
                     for col in range(peak_response_maps_sum.shape[1]):
-                        mask_pred = utils.generate_prm_mask(peak_response_maps_sum[:,col])
+                        mask_pred = utils.generate_prm_mask(np.asarray(peak_response_maps_sum[:,col]))
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                         ious[col] = iou_col
 
