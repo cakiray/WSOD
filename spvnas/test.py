@@ -121,7 +121,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     c = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if c < 500:
+        if True:#c < 500:
             c += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -146,8 +146,8 @@ def main() -> None:
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size, peak_filter=model.module.mean_filter)
             #print( "backprop calling ", len(peak_list),aggregation)
         
-            #peak_list: [0,0,indx], peak_responses=list of peak responses
-            peak_list, peak_responses = prm_backpropagation(inputs, outputs_bcn, peak_list, 
+            #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
+            peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                             peak_threshold=peak_threshold, normalize=False)
         
             #save the subsampled output and subsampled point cloud
@@ -173,8 +173,39 @@ def main() -> None:
             #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
             mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
 
-            #print(calib_file, label_file)
-        
+            # Calculate the mIoU of the sum of peak_responses
+            if len(peak_list)>0:
+                if peak_response_maps_sum.shape[1]>1:
+                    ious = np.zeros(shape=(4,2))
+                    for col in range(peak_response_maps_sum.shape[1]):
+                        mask_pred = utils.generate_prm_mask(peak_response_maps_sum[:,col])
+                        iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+                        ious[col] = iou_col
+
+                    if not np.isnan(np.sum(ious)):
+                        miou += ious
+                    count += 1
+
+            # If there is no peak detected
+            if len(peak_list) == 0:
+                # If each channel of peaks are returned, shape=(N,4)
+                if len(miou.shape)==2:
+                    ious = np.zeros(shape=(4,2))
+                    for col in range(miou.shape[0]):
+                        mask_pred = np.zeros_like(mask_gt_prm)
+                        iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+                        ious[col] = iou_col
+                    if not np.isnan(np.sum(ious)):
+                        miou += ious
+                else: # If sum of channels is detected
+                    mask_pred = np.zeros_like(mask_gt_prm)
+                    ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+                    if not np.any(np.sum(ious)):
+                        miou += ious
+                count += 1
+
+            """
+            #Calculate mIoU of each peak_response individually
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
@@ -196,24 +227,8 @@ def main() -> None:
                     if not np.isnan(np.sum(ious)):    
                         miou += ious
                 count += 1
+            """
 
-            # If there is no peak detected
-            if len(peak_list) == 0:
-                # If each channel of peaks are returned, shape=(N,4)
-                if len(miou.shape)==2:
-                    ious = np.zeros(shape=(4,2))
-                    for col in range(miou.shape[0]):
-                        mask_pred = np.zeros_like(mask_gt_prm)
-                        iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                        ious[col] = iou_col
-                    if not np.isnan(np.sum(ious)):
-                        miou += ious
-                else: # If sum of channels is detected
-                    mask_pred = np.zeros_like(mask_gt_prm)
-                    ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                    if not np.any(np.sum(ious)):
-                        miou += ious
-                count += 1
 
             output_dict = {
                 'outputs': outputs,
