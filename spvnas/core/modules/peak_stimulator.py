@@ -62,6 +62,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     
     valid_peak_list = []
     peak_response_maps = []
+    peak_response_maps_con = None
     i = 0
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
