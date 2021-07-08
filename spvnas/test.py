@@ -121,7 +121,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     c = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if True:#c < 3:
+        if c < 500:
             c += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -162,8 +162,8 @@ def main() -> None:
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-                
-            """
+            """ 
+            
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -229,9 +229,9 @@ def main() -> None:
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
-        writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
-        writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
-
+        #writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
+        #writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
+        pass
 
 if __name__ == '__main__':
     main()
