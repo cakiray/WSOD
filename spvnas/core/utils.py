@@ -136,3 +136,10 @@ def generate_prm_mask(prm):
     prm[prm > 0.0] = 1
     prm[prm <= 0.0] = 0
     return prm
+
+def normalize(arr):
+    min = np.min(arr[arr>0.0])
+    max = np.max(arr)
+    arr = (arr-min)/(max-min)
+    arr[arr<0.0] = 0.0
+    return arr
