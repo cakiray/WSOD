@@ -32,7 +32,7 @@ class PostHook(Function):
     @staticmethod
     def backward(ctx, grad_output):
         norm_factor, = ctx.saved_variables
-        eps = 1e-10
+        eps = 1e-3
         zero_mask = norm_factor < eps
         grad_input = grad_output / (torch.abs(norm_factor) + eps)
         grad_input[zero_mask.detach()] = 0

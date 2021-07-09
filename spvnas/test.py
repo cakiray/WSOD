@@ -110,7 +110,7 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    model.module._patch()
+    #model.module._patch()
     # important
     model.eval()
 
@@ -121,7 +121,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     c = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if True:#c < 500:
+        if True:#c < 20:
             c += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -159,11 +159,13 @@ def main() -> None:
             concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
             np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
             if len(peak_list) >0:    
+                
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-            """ 
-            
+                
+                np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
+            """
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
