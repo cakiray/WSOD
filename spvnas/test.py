@@ -131,7 +131,7 @@ def main() -> None:
             inputs = _inputs['lidar']
             targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
         
-            # outputs are got 1-by-1
+            # outputs are got 1-by-1 in test phase
             inputs.F.requires_grad = True
         
             outputs = model(inputs) # voxelized output (N,1)
@@ -143,12 +143,13 @@ def main() -> None:
             outputs_bcn = outputs_bcn.permute(0,2,1)
         
             # peak backpropagation
-            peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size, peak_filter=model.module.mean_filter)
+            peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
+                                                      peak_filter=model.module.mean_filter)
             #print( "backprop calling ", len(peak_list),aggregation)
         
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
-                                                            peak_threshold=peak_threshold, normalize=False)
+                                                            peak_threshold=peak_threshold, normalize=True)
         
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
@@ -179,8 +180,6 @@ def main() -> None:
                     ious = np.zeros(shape=(4,2))
                     for col in range(peak_response_maps_sum.shape[1]):
                         prm_c = np.asarray(peak_response_maps_sum[:,col])
-                        prm_c = utils.normalize(prm_c)
-                        prm_c[prm_c<0.05] = 0.0
                         mask_pred = utils.generate_prm_mask(prm_c)
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                         ious[col] = iou_col
@@ -203,7 +202,7 @@ def main() -> None:
                 else: # If sum of channels is detected
                     mask_pred = np.zeros_like(mask_gt_prm)
                     ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                    if not np.any(np.sum(ious)):
+                    if not np.isnan(np.sum(ious)):
                         miou += ious
                 count += 1
 
