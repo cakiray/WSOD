@@ -3,10 +3,6 @@ import numpy as np
 import torch.nn.functional as F
 from torch import autograd
 
-import torchsparse
-import torchsparse.nn as spnn
-
-
 class PeakStimulation(autograd.Function):
     @staticmethod
     def forward(ctx, input, win_size, peak_filter, return_aggregation=False):
@@ -86,10 +82,11 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             if normalize:
                 grad = np.absolute(grad)
                 #normalize gradient
-                mins= np.amin(np.array(grad), axis=0)
+                mins= np.amin(np.array(grad[grad>0.0]), axis=0)
                 maxs = np.amax(np.array(grad), axis=0)
                 grad = (grad-mins)/(maxs-mins)
-                grad[grad==float('inf')] = 0
+                grad[grad==float('inf')] = 0.0
+                grad[grad<0.05] = 0.0
 
             # PRM is absolute and sum of all channels
             prm = grad.detach().cpu().clone()
@@ -97,6 +94,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
             #prm = prm.sum(1) # sums columns
             #peak_response_maps.append( prm / prm.sum() )
+
             peak_response_maps.append(prm)
             #valid_peak_list contains indexes of 2 dimensions of valid peaks in center response map
             valid_peak_list.append(peak_list[idx,:])
@@ -113,77 +111,4 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         #print("# of peak responses and shape ", len(peak_response_maps), valid_peak_list.shape, peak_response_maps[0].shape)
         
     return valid_peak_list, peak_response_maps, peak_response_maps_con
-        
-def peak_backpropagation_max(inputs, outputs, normalize=False):
-    # PRM paper to calculate gradient
-    grad_output = outputs.new_empty(outputs.size())
-    grad_output.zero_()
-    
-    # Set 1 to the max of predicted center points in gradient
-    grad_output[torch.argmax(outputs)] = 1
 
-    if inputs.F.grad is not None:
-        inputs.F.grad.zero_() # shape is Nx4 , 2D
-
-    # Calculate peak response maps backwarding the output
-    outputs.backward(grad_output, retain_graph=True)
-
-    grad = inputs.F.grad.detach().cpu() # Nx4
-    #grad = torch.sum(grad[:,0:2],1)
-    if normalize:
-        grad = np.absolute(grad)
-        #normalize gradient
-        mins= np.amin(np.array(grad), axis=0)
-        maxs = np.amax(np.array(grad), axis=0)
-        grad = (grad-mins)/(maxs-mins)
-        grad[grad==float('inf')] = 0
-
-    # 0 <= grad <= 1
-    prm = grad # shape: Nx4, 2D
-    # print(np.all( np.logical_and( np.array(grad)>=0.0, np.array(grad)<=1.0 ) )) #True,
-            
-    return prm
-         
-    
-def median_filter(input):
-    batch_size, num_channels, n = input.size()
-    threshold = torch.median(input.view(batch_size, num_channels, n), dim=2)
-    return threshold.contiguous().view(batch_size, num_channels, 1)
-
-def mean_filter(input, threshold = 0.0):
-    batch_size, num_channels, n = input.size()
-    threshold = torch.mean(input.view(batch_size, num_channels, n), dim=2)
-    return threshold.contiguous().view(batch_size, num_channels, 1)
-    """
-    #n,d  = inputs.shape
-    n = len(input) 
-    print("mean filter input shape ", input.shape)
-    mean= torch.mean(input.view(-1,1), dim=0, keepdim=True)
-    print("max ",torch.max(input))
-    print("mean ", mean)
-    return mean"""
-
-
-def peak_stimulation_(input, filter='median', calc_threshold = True):
-  
-    # peak filtering
-    # get mask to filter center response maps
-    if filter == 'median':
-        mask = input >= median_filter(input)
-    elif filter == 'mean':
-        mask = input >= mean_filter(input)
-    else:
-        assert NotImplementedError
-        
-    # peak_list constain the indexes of possible peaks on CRM, shape: [N,2]
-    peak_list = torch.nonzero(mask)
-    print("peak_list len ", peak_list.shape)
-    
-    if calc_threshold:
-        temp = input[peak_list[:,0], peak_list[:,1]]
-        peak_threshold = torch.mean( temp.view(-1,1), dim=0 )
-        print(peak_threshold)
-    
-        return peak_list, peak_threshold
-    else:
-        return peak_list, -1
