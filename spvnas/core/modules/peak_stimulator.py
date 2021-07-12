@@ -58,7 +58,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     
     valid_peak_list = []
     peak_response_maps = []
-    peak_response_maps_con = None
+    peak_response_maps_con = np.zeros_list(inputs.F)
     i = 0
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
@@ -96,6 +96,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             #peak_response_maps.append( prm / prm.sum() )
 
             peak_response_maps.append(prm)
+            peak_response_maps_con += prm
             #valid_peak_list contains indexes of 2 dimensions of valid peaks in center response map
             valid_peak_list.append(peak_list[idx,:])
             i += 1
@@ -107,7 +108,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         # peak responses of each valid peak list is concatanated vertically
         # shape = (len(valid_peak_list) * number_of_points_in_scene), channel_no_of_grad
         #peak_response_maps_con = torch.cat(peak_response_maps, 0)
-        peak_response_maps_con = sum(peak_response_maps)
+        #peak_response_maps_con = sum(peak_response_maps)
         #print("# of peak responses and shape ", len(peak_response_maps), valid_peak_list.shape, peak_response_maps[0].shape)
         
     return valid_peak_list, peak_response_maps, peak_response_maps_con
