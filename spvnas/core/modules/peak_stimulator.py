@@ -58,7 +58,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     
     valid_peak_list = []
     peak_response_maps = []
-    peak_response_maps_con = np.zeros_list(inputs.F)
+    peak_response_maps_con = np.zeros((inputs.F.shape))
     i = 0
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
@@ -88,15 +88,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 maxs = np.amax(np.array(prm), axis=0)
                 prm = (prm-mins)/(maxs-mins)
                 prm[prm==float('inf')] = 0.0
-                prm[prm<0.05] = 0.0
-
+                prm[prm==float('-inf')] = 0.0
 
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
             #prm = prm.sum(1) # sums columns
             #peak_response_maps.append( prm / prm.sum() )
 
             peak_response_maps.append(prm)
-            peak_response_maps_con += prm
+            peak_response_maps_con +=np.asarray( prm)
             #valid_peak_list contains indexes of 2 dimensions of valid peaks in center response map
             valid_peak_list.append(peak_list[idx,:])
             i += 1
