@@ -115,10 +115,13 @@ def main() -> None:
     model.eval()
 
     miou = np.zeros(shape=(4,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
+    mprecision = np.zeros(shape=(4,2))
+    mrecall = np.zeros(shape=(4,2))
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count = 0
-    
+    prec_count = 0
+    recall_count = 0
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
@@ -137,7 +140,7 @@ def main() -> None:
         
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets) 
-            """
+
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -154,7 +157,7 @@ def main() -> None:
         
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            """
+
             """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
@@ -177,6 +180,7 @@ def main() -> None:
             labels = utils.read_labels( label_file)
             #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
             mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
+
             """
             # Calculate the mIoU of the sum of peak_responses
             if len(peak_list)>0:
@@ -209,38 +213,42 @@ def main() -> None:
                     if not np.isnan(np.sum(ious)):
                         miou += ious
                 count += len(peak_list)
+
             """
-            """
-            #Calculate mIoU of each peak_response individually
+            #Calculate mprecision and mrecall of each peak_response individually
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
+                peak = peak_list[i]
+                print('peak :',peak)
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,4)
                 if prm.shape[1] >1:
-                    ious = np.zeros(shape=(4,2))
+                    prec = np.zeros(shape=(4,2))
+                    recall = np.zeros(shape=(4,2))
                     for col in range(prm.shape[1]):
                         mask_pred = utils.generate_prm_mask(prm[:,col])
-                        iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                        ious[col] = iou_col
-                    
-                    if not np.isnan(np.sum(ious)):    
-                        miou += ious
+                        iou_prec= utils.iou_precision(peak, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
+                                                      preds=mask_pred, labels=labels, calibs=calibs, n_classes=2)
+                        iou_recall= utils.iou_recall(peak, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
+                                                     preds=mask_pred, labels=labels, calibs=calibs, n_classes=2)
+                        prec[col] = iou_prec
+                        recall[col] = iou_recall
+                    print('prec: ', prec)
+                    print('recall: ', recall)
+                    if prec:
+                        mprecision += prec
+                        prec_count += 1
+                    if recall:
+                        mrecall += recall
+                        recall_count += 1
 
-                else: # If sum of channels is detected
-                    mask_pred = utils.generate_prm_mask(prm)
-                    ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-                    
-                    if not np.isnan(np.sum(ious)):    
-                        miou += ious
-                count += 1
             """
-
             #Calculation of mean IoU on CRM
             crm = outputs.cpu()
             mask_pred = utils.generate_prm_mask(crm)
             iou = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
             miou += iou
-
+            """
             output_dict = {
                 'outputs': outputs,
                 'targets': targets
@@ -251,13 +259,20 @@ def main() -> None:
     trainer.after_epoch()
     
     miou /= n
-    print(f"mIoU:\n\t{miou},\nTotal Number of PRMs: {count}")
+    mprecision /= prec_count
+    mrecall /= recall_count
+    print(f"mIoU:\n\t{miou},\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
-        writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}crm", miou_col[1], r)
-        writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}-crm", miou_col[0], r)
-        pass
+        #writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
+        #writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
+        writer.add_scalar(f"prm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}", mprecision[r][0], r)
+        writer.add_scalar(f"prm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}", mrecall[r][0], r)
+        writer.add_scalar(f"prm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}", mprecision[r][1], r)
+        writer.add_scalar(f"prm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}", mrecall[r][1], r)
+
+        #pass
 
 if __name__ == '__main__':
     main()

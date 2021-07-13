@@ -93,7 +93,6 @@ def box_center_to_corner(data, calibs):
 
 
 def iou(preds, targets, n_classes=2):
-
     ious = np.zeros(n_classes)
     pred = preds.reshape(-1,1)
     target = targets.reshape(-1,1)
@@ -109,6 +108,56 @@ def iou(preds, targets, n_classes=2):
             ious[cls] = float(intersection) / float(max(union, 1))
 
     return np.array(ious)
+
+def iou_precision(peak, points, preds, labels, calibs, n_classes=2):
+    precision = np.zeros(n_classes)
+    bbox_label = find_bbox(peak, labels, calibs)
+    if bbox_label:
+        crm_target = generate_car_masks(points, bbox_label, calibs)
+        for cls in range(n_classes):
+            preds_inds = preds==cls
+            target_inds = crm_target==cls
+            tp = (preds_inds[target_inds]).sum()
+            fp = preds_inds.sum()-tp
+            precision[cls] = float(tp / fp)
+
+        return np.array(precision)
+    else:
+        return None
+
+def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
+    recall = np.zeros(n_classes)
+    bbox_label = find_bbox(peak, labels, calibs)
+    if bbox_label:
+        crm_target = generate_car_masks(points, bbox_label, calibs)
+        for cls in range(n_classes):
+            preds_inds = preds==cls
+            target_inds = crm_target==cls
+            non_pred_inds = preds!=cls
+            tp = (preds_inds[target_inds]).sum()
+            fn = non_pred_inds[target_inds].sum()
+            recall[cls] = float(tp / fn)
+
+    return np.array(recall)
+
+def find_bbox(point, labels, calibs):
+    bboxes = get_bboxes(labels=labels, calibs=calibs)
+    i=-1
+    for label in labels:
+        if label['type'] != b'DontCare':
+            i += 1
+        if label['type'] == b'Car':
+            bbox = bboxes[i*8:(i+1)*8-1]
+            p1, p2, p4, p5 = bbox[0], bbox[1], bbox[3], bbox[4]
+            u, v, w, p = p2-p1, p4-p1, p5-p1, point-p1
+            ux = np.logical_and( np.dot(p,u) < np.dot(u,u), np.dot(p,u)>0.0 )
+            vx = np.logical_and( np.dot(p,v) < np.dot(v,v), np.dot(p,v)>0.0 )
+            wx = np.logical_and( np.dot(p,w) < np.dot(w,w), np.dot(p,w)>0.0 )
+
+            if np.logical_and(ux,vx,wx):
+                return label
+
+    return None
 
 def generate_car_masks(points, labels, calibs):
     points = np.asarray(points)
