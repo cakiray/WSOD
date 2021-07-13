@@ -110,19 +110,20 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    #model.module._patch()
+    model.module._patch()
     # important
     model.eval()
 
     miou = np.zeros(shape=(4,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
-    count = 0 
+    count = 0
+    
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
-    c = 0
+    n = 0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if True:#c < 20:
-            c += 1
+        if True:#n < 20:
+            n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
                 if not 'name' in key:
@@ -141,7 +142,7 @@ def main() -> None:
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
             outputs_bcn = outputs_bcn.permute(0,2,1)
-        
+
             # peak backpropagation
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
@@ -153,20 +154,20 @@ def main() -> None:
         
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            """
+            
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
             concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
             np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
             if len(peak_list) >0:    
-                
+                """    
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-                
+                """
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
-            """
+            
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -188,7 +189,7 @@ def main() -> None:
 
                     if not np.isnan(np.sum(ious)):
                         miou += ious
-                    count += 1
+                    count += len(peak_list)
 
             # If there is no peak detected
             if len(peak_list) == 0:
@@ -206,7 +207,7 @@ def main() -> None:
                     ious = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
                     if not np.isnan(np.sum(ious)):
                         miou += ious
-                count += 1
+                count += len(peak_list)
 
             """
             #Calculate mIoU of each peak_response individually
@@ -243,13 +244,13 @@ def main() -> None:
             break
     trainer.after_epoch()
     
-    miou /= count
+    miou /= n
     print(f"mIoU:\n\t{miou},\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
-        #writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
-        #writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
+        writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}-front", miou_col[1], r)
+        writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}-front", miou_col[0], r)
         pass
 
 if __name__ == '__main__':
