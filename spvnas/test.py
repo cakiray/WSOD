@@ -137,7 +137,7 @@ def main() -> None:
         
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets) 
-
+            """
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -154,20 +154,21 @@ def main() -> None:
         
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            
+            """
+            """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
             concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
             np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
             if len(peak_list) >0:    
-                """    
+                    
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-                """
+                
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
-            
+            """
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -176,7 +177,7 @@ def main() -> None:
             labels = utils.read_labels( label_file)
             #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
             mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
-
+            """
             # Calculate the mIoU of the sum of peak_responses
             if len(peak_list)>0:
                 if peak_response_maps_sum.shape[1]>1:
@@ -208,7 +209,7 @@ def main() -> None:
                     if not np.isnan(np.sum(ious)):
                         miou += ious
                 count += len(peak_list)
-
+            """
             """
             #Calculate mIoU of each peak_response individually
             for i in range(len(peak_list)):
@@ -234,6 +235,11 @@ def main() -> None:
                 count += 1
             """
 
+            #Calculation of mean IoU on CRM
+            crm = outputs.cpu()
+            mask_pred = utils.generate_prm_mask(crm)
+            iou = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
+            miou += iou
 
             output_dict = {
                 'outputs': outputs,
@@ -249,8 +255,8 @@ def main() -> None:
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
-        writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}-front", miou_col[1], r)
-        writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}-front", miou_col[0], r)
+        writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}crm", miou_col[1], r)
+        writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}-crm", miou_col[0], r)
         pass
 
 if __name__ == '__main__':
