@@ -218,8 +218,8 @@ def main() -> None:
             #Calculate mprecision and mrecall of each peak_response individually
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
-                peak = peak_list[i]
-                print('peak :',peak)
+                peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
+        
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,4)
                 if prm.shape[1] >1:
@@ -227,18 +227,17 @@ def main() -> None:
                     recall = np.zeros(shape=(4,2))
                     for col in range(prm.shape[1]):
                         mask_pred = utils.generate_prm_mask(prm[:,col])
-                        iou_prec= utils.iou_precision(peak, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
+                        iou_prec= utils.iou_precision(peak_ind, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
                                                       preds=mask_pred, labels=labels, calibs=calibs, n_classes=2)
-                        iou_recall= utils.iou_recall(peak, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
+                        iou_recall= utils.iou_recall(peak_ind, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
                                                      preds=mask_pred, labels=labels, calibs=calibs, n_classes=2)
                         prec[col] = iou_prec
                         recall[col] = iou_recall
-                    print('prec: ', prec)
-                    print('recall: ', recall)
-                    if prec:
+        
+                    if not np.isnan(np.sum(prec)):
                         mprecision += prec
                         prec_count += 1
-                    if recall:
+                    if not np.isnan(np.sum(recall)):
                         mrecall += recall
                         recall_count += 1
 
