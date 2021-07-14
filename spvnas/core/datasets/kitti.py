@@ -150,7 +150,7 @@ class KITTIInternal:
             block_ = np.concatenate( (block_, ground_feature), axis=1)
         
         labels_ = np.load( self.crm_pcs[index]).astype(float)
-        if 'train' in self.split:
+        if True:#'train' in self.split:
             # get the points only at front view
             # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
             front_idxs = block_[:,0]>=0
