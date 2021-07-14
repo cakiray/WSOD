@@ -114,10 +114,10 @@ def iou_precision(peak, points, preds, labels, calibs, n_classes=2):
     peak = points[peak[2]]
     bbox_label = find_bbox(peak, labels, calibs)
     if bbox_label:
-        crm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
+        prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
         for cls in range(n_classes):
             preds_inds = preds==cls
-            target_inds = crm_target==cls
+            target_inds = prm_target==cls
             tp = (preds_inds[target_inds]).sum()
             fp = preds_inds.sum()-tp
             precision[cls] = float(tp / (fp+tp))
@@ -131,10 +131,10 @@ def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
     peak = points[peak[2]] # indx is at 3th element of peak variable
     bbox_label = find_bbox(peak, labels, calibs)
     if bbox_label:
-        crm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
+        prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
         for cls in range(n_classes):
             preds_inds = preds==cls
-            target_inds = crm_target==cls
+            target_inds = prm_target==cls
             non_pred_inds = preds!=cls
             tp = (preds_inds[target_inds]).sum()
             fn = non_pred_inds[target_inds].sum()
@@ -143,6 +143,32 @@ def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
         return np.array(recall)
     else:
         return None
+
+def iou_precision_crm(preds, targets,  n_classes=2):
+    precision = np.zeros(n_classes)
+
+    for cls in range(n_classes):
+        preds_inds = preds==cls
+        target_inds = targets==cls
+        tp = (preds_inds[target_inds]).sum()
+        fp = preds_inds.sum()-tp
+        precision[cls] = float(tp / (fp+tp))
+
+    return precision
+
+def iou_recall_crm(preds, targets,  n_classes=2):
+    recall = np.zeros(n_classes)
+
+    for cls in range(n_classes):
+        preds_inds = preds==cls
+        target_inds = targets==cls
+        non_pred_inds = preds!=cls
+        tp = (preds_inds[target_inds]).sum()
+        fn = non_pred_inds[target_inds].sum()
+        recall[cls] = float(tp / (tp+fn))
+
+    return recall
+
 def find_bbox(point, labels, calibs):
     bboxes = get_bboxes(labels=labels, calibs=calibs)
     i=-1

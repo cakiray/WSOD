@@ -115,8 +115,11 @@ def main() -> None:
     model.eval()
 
     miou = np.zeros(shape=(4,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
+    miou_crm = np.zeros(shape=(1,2)) #miou of crm is calculated by binary class (being pos, being nonpos values on PRM)
     mprecision = np.zeros(shape=(4,2))
     mrecall = np.zeros(shape=(4,2))
+    mprecision_crm = np.zeros(shape=(1,2))
+    mrecall_crm = np.zeros(shape=(1,2))
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count = 0
@@ -241,13 +244,18 @@ def main() -> None:
                         mrecall += recall
                         recall_count += 1
 
-            """
+
             #Calculation of mean IoU on CRM
             crm = outputs.cpu()
             mask_pred = utils.generate_prm_mask(crm)
             iou = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
-            miou += iou
-            """
+            prec = utils.iou_precision_crm(crm, mask_gt_prm, n_classes=2 )
+            recall = utils.iou_recall_crm(crm, mask_gt_prm, n_classes=2)
+
+            mprecision_crm += prec
+            mrecall_crm += recall
+            miou_crm += iou
+
             output_dict = {
                 'outputs': outputs,
                 'targets': targets
@@ -258,6 +266,8 @@ def main() -> None:
     trainer.after_epoch()
     
     miou /= n
+    mprecision_crm /= n
+    mrecall_crm /= n
     mprecision /= prec_count
     mrecall /= recall_count
     print(f"mIoU:\n\t{miou},\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nTotal Number of PRMs: {count}")
@@ -266,12 +276,17 @@ def main() -> None:
     for r,miou_col in enumerate(miou):
         #writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
         #writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
+        """
         writer.add_scalar(f"prm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}", mprecision[r][0], r)
         writer.add_scalar(f"prm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}", mrecall[r][0], r)
         writer.add_scalar(f"prm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}", mprecision[r][1], r)
         writer.add_scalar(f"prm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}", mrecall[r][1], r)
+        """
+        pass
 
-        #pass
-
+    writer.add_scalar(f"crm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}", mprecision_crm[0], 0)
+    writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}", mrecall_crm[0], 0)
+    writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}", mprecision_crm[1], 0)
+    writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}", mrecall_crm[1], 0)
 if __name__ == '__main__':
     main()
