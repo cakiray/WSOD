@@ -115,16 +115,17 @@ def iou_precision(peak, points, preds, labels, calibs, n_classes=2):
     bbox_label = find_bbox(peak, labels, calibs)
     if bbox_label:
         prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
-        for cls in range(n_classes):
-            preds_inds = preds==cls
-            target_inds = prm_target==cls
-            tp = (preds_inds[target_inds]).sum()
-            fp = preds_inds.sum()-tp
-            precision[cls] = float(tp / (fp+tp))
-
-        return np.array(precision)
     else:
-        return None
+        prm_target = np.zeros_like(preds)
+    for cls in range(n_classes):
+        preds_inds = preds==cls
+        target_inds = prm_target==cls
+        tp = (preds_inds[target_inds]).sum()
+        fp = preds_inds.sum()-tp
+        precision[cls] = float(tp / (fp+tp))
+
+    return np.array(precision)
+
 
 def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
     recall = np.zeros(n_classes)
@@ -132,17 +133,17 @@ def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
     bbox_label = find_bbox(peak, labels, calibs)
     if bbox_label:
         prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
-        for cls in range(n_classes):
-            preds_inds = preds==cls
-            target_inds = prm_target==cls
-            non_pred_inds = preds!=cls
-            tp = (preds_inds[target_inds]).sum()
-            fn = non_pred_inds[target_inds].sum()
-            recall[cls] = float(tp / (tp+fn))
-
-        return np.array(recall)
     else:
-        return None
+        prm_target = np.zeros_like(preds)
+    for cls in range(n_classes):
+        preds_inds = preds==cls
+        target_inds = prm_target==cls
+        non_pred_inds = preds!=cls
+        tp = (preds_inds[target_inds]).sum()
+        fn = non_pred_inds[target_inds].sum()
+        recall[cls] = float(tp / (tp+fn))
+
+    return np.array(recall)
 
 def iou_precision_crm(preds, targets,  n_classes=2):
     precision = np.zeros(n_classes)
