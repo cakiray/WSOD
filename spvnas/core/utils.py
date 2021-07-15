@@ -221,3 +221,15 @@ def normalize(arr):
     arr = (arr-min)/(max-min)
     arr[arr<0.0] = 0.0
     return arr
+
+# Segments ground of predictions
+def segment_ground(points, preds, distance_threshold=0.15):
+    pcd=open3d.open3d.geometry.PointCloud()
+    pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
+    #inlers contains the indexes of ground points
+    plane_model, inliers = pcd.segment_plane(distance_threshold=distance_threshold,
+                                             ransac_n=100,
+                                             num_iterations=1000)
+    preds[inliers] = 0.0
+
+    return preds
