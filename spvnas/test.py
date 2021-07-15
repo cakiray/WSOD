@@ -125,8 +125,9 @@ def main() -> None:
     count = 0
     prec_count = 0
     recall_count = 0
+
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
-    n = 0
+    n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
         if True:#n < 20:
             n += 1
@@ -144,6 +145,7 @@ def main() -> None:
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets) 
 
+            """
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -157,10 +159,10 @@ def main() -> None:
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                             peak_threshold=peak_threshold, normalize=True)
-        
+            """
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-
+            
             """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
@@ -218,6 +220,8 @@ def main() -> None:
                 count += len(peak_list)
 
             """
+
+            """
             #Calculate mprecision and mrecall of each peak_response individually
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
@@ -244,16 +248,21 @@ def main() -> None:
                         mrecall += recall
                         recall_count += 1
 
-
+            """
             #Calculation of mean IoU on CRM
             crm = outputs.cpu()
+            crm = crm.detach().numpy()
             mask_pred = utils.generate_prm_mask(crm)
             iou = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
             prec = utils.iou_precision_crm(crm, mask_gt_prm, n_classes=2 )
             recall = utils.iou_recall_crm(crm, mask_gt_prm, n_classes=2)
-
-            mprecision_crm += prec
-            mrecall_crm += recall
+            
+            if not np.isnan(np.sum(prec)):
+                mprecision_crm += prec
+                p += 1
+            if not np.isnan(np.sum(recall)):
+                mrecall_crm += recall
+                r += 1
             miou_crm += iou
 
             output_dict = {
@@ -266,11 +275,11 @@ def main() -> None:
     trainer.after_epoch()
     
     miou /= n
-    mprecision_crm /= n
-    mrecall_crm /= n
-    mprecision /= prec_count
-    mrecall /= recall_count
-    print(f"mIoU:\n\t{miou},\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nTotal Number of PRMs: {count}")
+    mprecision_crm /= p
+    mrecall_crm /= r
+    #mprecision /= prec_count
+    #mrecall /= recall_count
+    print(f"mIoU:\n\t{miou},\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
@@ -283,10 +292,11 @@ def main() -> None:
         writer.add_scalar(f"prm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}", mrecall[r][1], r)
         """
         pass
-
-    writer.add_scalar(f"crm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}", mprecision_crm[0], 0)
-    writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}", mrecall_crm[0], 0)
-    writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}", mprecision_crm[1], 0)
-    writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}", mrecall_crm[1], 0)
+    
+    writer.add_scalar(f"crm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}", mprecision_crm[0][0], 0)
+    writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}", mrecall_crm[0][0], 0)
+    writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}", mprecision_crm[0][1], 0)
+    writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}", mrecall_crm[0][1], 0)
+    
 if __name__ == '__main__':
     main()
