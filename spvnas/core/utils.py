@@ -224,6 +224,21 @@ def bbox_precision(labels, idx_list, fp):
         return -2
     return tp/(tp+fp)
 
+def get_detected_bbox_num(labels, idx_list):
+    tp = 0
+    dontcare = 0
+    num_bbox = len(labels)
+    for i,label in enumerate(labels):
+        if label['type'] != 'DontCare':
+            if idx_list[i] >0:
+                tp += 1
+        else:
+            dontcare += 1
+
+    valid_bbox_num = num_bbox-dontcare
+    detected_bbox_num = tp
+    return detected_bbox_num, valid_bbox_num
+
 def generate_car_masks(points, labels, calibs):
     points = np.asarray(points)
     #points = points[points[:,0]>0]

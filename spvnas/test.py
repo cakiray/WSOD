@@ -126,7 +126,9 @@ def main() -> None:
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count, prec_count,recall_count = 0,0,0
+    total_bbox_num , total_detected_bbox_num= 0, 0
     bbox_p, bbox_r = 0,0
+
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
@@ -263,6 +265,9 @@ def main() -> None:
             recall = utils.iou_recall_crm(crm, mask_gt_prm, n_classes=2)
             bbox_recall = utils.bbox_recall(labels, bbox_found_indicator)
             bbox_precision = utils.bbox_precision(labels, bbox_found_indicator, fp_bbox)
+            detected_bbox_num, valid_bbox_num = utils.get_detected_bbox_num(labels, bbox_found_indicator)
+            total_bbox_num += valid_bbox_num
+            total_detected_bbox_num += detected_bbox_num
 
             if bbox_recall >= 0.0:
                 mbbox_recall += bbox_recall
@@ -297,6 +302,8 @@ def main() -> None:
     mrecall_crm /= r
     mprecision /= prec_count
     mrecall /= recall_count
+    bbox_detection_rate = total_bbox_num / total_detected_bbox_num
+    print(f"Bbox Detection Rate:{bbox_detection_rate}")
 
     print(f"mIoU:\n\t{miou},\nmIoU CRM:{miou_crm}\nMean_Bbox_Recall:{mbbox_recall}\nMean_Bbox_Precision:{mbbox_precision}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
 
@@ -315,8 +322,8 @@ def main() -> None:
     #writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][0], 0)
     #writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][1], 0)
     #writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][1], 0)
-    writer.add_scalar(f"mBbox_Recall-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_recall, 0)
-    writer.add_scalar(f"mBbox_Precision-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_precision, 0)
+    #writer.add_scalar(f"mBbox_Recall-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_recall, 0)
+    #writer.add_scalar(f"mBbox_Precision-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_precision, 0)
 
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
