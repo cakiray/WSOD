@@ -122,6 +122,8 @@ def main() -> None:
     mrecall = np.zeros(shape=(4,2))
     mprecision_crm = np.zeros(shape=(1,2))
     mrecall_crm = np.zeros(shape=(1,2))
+    mbbox_recall =0.0
+    mbbox_precision =0.0
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count = 0
@@ -146,7 +148,6 @@ def main() -> None:
         
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets) 
-
 
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
@@ -186,10 +187,11 @@ def main() -> None:
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
+            bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
+            fp_bbox = 0
             #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
             mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
 
-            
             # Calculate the mIoU of the sum of peak_responses
             if len(peak_list)>0:
                 if peak_response_maps_sum.shape[1]>1:
@@ -222,14 +224,17 @@ def main() -> None:
                         miou += ious
                 count += len(peak_list)
 
-            
-
-
             #Calculate mprecision and mrecall of each peak_response individually
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
-        
+
+                peak = np.asarray(inputs.F[:,0:3].detach().cpu())[peak[2]] # indx is at 3th element of peak variable
+                _, bbox_idx = utils.find_bbox(peak, labels, calibs)
+                if bbox_idx == -1:
+                    fp_bbox += 1
+                else:
+                    bbox_found_indicator[bbox_idx] = 1
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,4)
                 if prm.shape[1] >1:
@@ -251,7 +256,6 @@ def main() -> None:
                         mrecall += recall
                         recall_count += 1
 
-
             #Calculation of mean IoU on CRM
             crm = outputs.cpu()
             crm = crm.detach().numpy()
@@ -260,7 +264,15 @@ def main() -> None:
             iou = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
             prec = utils.iou_precision_crm(crm, mask_gt_prm, n_classes=2 )
             recall = utils.iou_recall_crm(crm, mask_gt_prm, n_classes=2)
-            
+            bbox_recall = utils.bbox_recall(labels, bbox_found_indicator)
+            bbox_precision = utils.bbox_precision(labels, bbox_found_indicator, fp_bbox)
+
+            if bbox_recall >= 0.0:
+                mbbox_recall += bbox_recall
+
+            if bbox_precision >= 0.0:
+                mbbox_precision += bbox_precision
+
             if not np.isnan(np.sum(prec)):
                 mprecision_crm += prec
                 p += 1
@@ -280,12 +292,14 @@ def main() -> None:
     
     miou /= n
     miou_crm /= n
+    mbbox_recall /= n
+    mbbox_precision /= n
     mprecision_crm /= p
     mrecall_crm /= r
     mprecision /= prec_count
     mrecall /= recall_count
 
-    print(f"mIoU:\n\t{miou},\nmIoU CRM:{miou_crm}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
+    print(f"mIoU:\n\t{miou},\nmIoU CRM:{miou_crm}\nMean_Bbox_Recall:{mbbox_recall}Mean_Bbox_Precision:{mbbox_precision}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
@@ -302,7 +316,9 @@ def main() -> None:
     writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][0], 0)
     writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][1], 0)
     writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][1], 0)
-    
+    writer.add_scalar(f"mBbox_Recall-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_recall, 0)
+    writer.add_scalar(f"mBbox_Precision-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_precision, 0)
+
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
 if __name__ == '__main__':
