@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 import numpy as np
-
+from time import perf_counter
 from tqdm import tqdm
 
 import torch
@@ -113,6 +113,8 @@ def main() -> None:
     model.module._patch()
     # important
     model.eval()
+    
+    t1_start = perf_counter()
 
     miou = np.zeros(shape=(4,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
     miou_crm = np.zeros(shape=(1,2)) #miou of crm is calculated by binary class (being pos, being nonpos values on PRM)
@@ -160,6 +162,7 @@ def main() -> None:
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                             peak_threshold=peak_threshold, normalize=True)
 
+            #print("peak len", len( peak_list))
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             
@@ -186,7 +189,7 @@ def main() -> None:
             #Masked ground truth of instances, points in instances bbox as 1, remainings as 0
             mask_gt_prm = utils.generate_car_masks(np.asarray(inputs.F[:,0:3].detach().cpu()), labels,  calibs)
 
-            """
+            
             # Calculate the mIoU of the sum of peak_responses
             if len(peak_list)>0:
                 if peak_response_maps_sum.shape[1]>1:
@@ -219,7 +222,7 @@ def main() -> None:
                         miou += ious
                 count += len(peak_list)
 
-            """
+            
 
 
             #Calculate mprecision and mrecall of each peak_response individually
@@ -300,5 +303,7 @@ def main() -> None:
     writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][1], 0)
     writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][1], 0)
     
+    t1_stop = perf_counter()
+    print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
 if __name__ == '__main__':
     main()
