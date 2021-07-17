@@ -122,14 +122,11 @@ def main() -> None:
     mrecall = np.zeros(shape=(4,2))
     mprecision_crm = np.zeros(shape=(1,2))
     mrecall_crm = np.zeros(shape=(1,2))
-    mbbox_recall =0.0
-    mbbox_precision =0.0
+    mbbox_recall,mbbox_precision =0.0, 0,0
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
-    count = 0
-    prec_count = 0
-    recall_count = 0
-
+    count, prec_count,recall_count = 0,0,0
+    bbox_p, bbox_r = 0,0
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
@@ -269,9 +266,11 @@ def main() -> None:
 
             if bbox_recall >= 0.0:
                 mbbox_recall += bbox_recall
+                bbox_r +=1
 
             if bbox_precision >= 0.0:
                 mbbox_precision += bbox_precision
+                bbox_p += 1
 
             if not np.isnan(np.sum(prec)):
                 mprecision_crm += prec
@@ -292,8 +291,8 @@ def main() -> None:
     
     miou /= n
     miou_crm /= n
-    mbbox_recall /= n
-    mbbox_precision /= n
+    mbbox_recall /= bbox_r
+    mbbox_precision /= bbox_p
     mprecision_crm /= p
     mrecall_crm /= r
     mprecision /= prec_count

@@ -205,8 +205,6 @@ def bbox_recall(labels, idx_list):
 
     if dontcare == num_bbox:
         return -2
-    if tp+fn == 0:
-        return 0.0
     return tp/(tp+fn)
 
 def bbox_precision(labels, idx_list, fp):
@@ -223,7 +221,7 @@ def bbox_precision(labels, idx_list, fp):
     if dontcare == num_bbox:
         return -2
     if tp+fp == 0:
-        return 0.0
+        return -2
     return tp/(tp+fp)
 
 def generate_car_masks(points, labels, calibs):
