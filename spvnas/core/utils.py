@@ -112,7 +112,7 @@ def iou(preds, targets, n_classes=2):
 def iou_precision(peak, points, preds, labels, calibs, n_classes=2):
     precision = np.zeros(n_classes)
     peak = points[peak[2]]
-    bbox_label = find_bbox(peak, labels, calibs)
+    bbox_label, bbox_idx = find_bbox(peak, labels, calibs)
     if bbox_label:
         prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
     else:
@@ -130,7 +130,7 @@ def iou_precision(peak, points, preds, labels, calibs, n_classes=2):
 def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
     recall = np.zeros(n_classes)
     peak = points[peak[2]] # indx is at 3th element of peak variable
-    bbox_label = find_bbox(peak, labels, calibs)
+    bbox_label, bbox_idx = find_bbox(peak, labels, calibs)
     if bbox_label:
         prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
     else:
@@ -185,9 +185,46 @@ def find_bbox(point, labels, calibs):
             wx = np.dot(p,w) < np.dot(w,w) and np.dot(p,w)>0.0 
         
             if (ux and vx) and wx:  
-                return np.asarray([label])
+                return np.asarray([label]), i
 
-    return None
+    return None, -1
+
+def bbox_recall(labels, idx_list):
+    tp = 0
+    fn = 0
+    dontcare = 0
+    num_bbox = len(labels)
+    for i,label in enumerate(labels):
+        if label['type'] != 'DontCare':
+            if idx_list[i] >0:
+                tp += 1
+            else:
+                fn += 1
+        else:
+            dontcare += 1
+
+    if dontcare == num_bbox:
+        return -2
+    if tp+fn == 0:
+        return 0.0
+    return tp/(tp+fn)
+
+def bbox_precision(labels, idx_list, fp):
+    tp = 0
+    dontcare = 0
+    num_bbox = len(labels)
+    for i,label in enumerate(labels):
+        if label['type'] != 'DontCare':
+            if idx_list[i] >0:
+                tp += 1
+        else:
+            dontcare += 1
+
+    if dontcare == num_bbox:
+        return -2
+    if tp+fp == 0:
+        return 0.0
+    return tp/(tp+fp)
 
 def generate_car_masks(points, labels, calibs):
     points = np.asarray(points)
