@@ -91,7 +91,9 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 prm = (prm-mins)/(maxs-mins)
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
+                prm[prm<0.05] = 0.0 # some thresholding
 
+            #segment ground to reduce false positives
             prm = utils.segment_ground(points=inputs.F, preds=prm, distance_threshold=0.15)
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
             #prm = prm.sum(1) # sums columns
