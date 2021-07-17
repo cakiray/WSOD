@@ -229,7 +229,7 @@ def main() -> None:
                 prm = np.asarray(peak_responses[i])
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
 
-                peak = np.asarray(inputs.F[:,0:3].detach().cpu())[peak[2]] # indx is at 3th element of peak variable
+                peak = np.asarray(inputs.F[:,0:3].detach().cpu())[peak_ind[2]] # indx is at 3th element of peak variable
                 _, bbox_idx = utils.find_bbox(peak, labels, calibs)
                 if bbox_idx == -1:
                     fp_bbox += 1
@@ -306,16 +306,16 @@ def main() -> None:
         #writer.add_scalar(f"prm-mIoU-pos-ws_{win_size}-pt_{peak_threshold}", miou_col[1], r)
         #writer.add_scalar(f"prm-mIoU-neg-ws_{win_size}-pt_{peak_threshold}", miou_col[0], r)
 
-        writer.add_scalar(f"prm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}-gs", mprecision[r][0], r)
-        writer.add_scalar(f"prm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}-gs", mrecall[r][0], r)
-        writer.add_scalar(f"prm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision[r][1], r)
-        writer.add_scalar(f"prm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall[r][1], r)
-        #pass
+        #writer.add_scalar(f"prm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}-gs", mprecision[r][0], r)
+        #writer.add_scalar(f"prm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}-gs", mrecall[r][0], r)
+        #writer.add_scalar(f"prm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision[r][1], r)
+        #writer.add_scalar(f"prm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall[r][1], r)
+        pass
     
-    writer.add_scalar(f"crm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][0], 0)
-    writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][0], 0)
-    writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][1], 0)
-    writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][1], 0)
+    #writer.add_scalar(f"crm-mPrecision-neg-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][0], 0)
+    #writer.add_scalar(f"crm-mRecall-neg-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][0], 0)
+    #writer.add_scalar(f"crm-mPrecision-pos-ws_{win_size}-pt_{peak_threshold}-gs", mprecision_crm[0][1], 0)
+    #writer.add_scalar(f"crm-mRecall-pos-ws_{win_size}-pt_{peak_threshold}-gs", mrecall_crm[0][1], 0)
     writer.add_scalar(f"mBbox_Recall-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_recall, 0)
     writer.add_scalar(f"mBbox_Precision-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_precision, 0)
 
