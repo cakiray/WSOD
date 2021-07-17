@@ -122,7 +122,7 @@ def main() -> None:
     mrecall = np.zeros(shape=(4,2))
     mprecision_crm = np.zeros(shape=(1,2))
     mrecall_crm = np.zeros(shape=(1,2))
-    mbbox_recall,mbbox_precision =0.0, 0,0
+    mbbox_recall,mbbox_precision =0.0, 0.0
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     count, prec_count,recall_count = 0,0,0
@@ -298,7 +298,7 @@ def main() -> None:
     mprecision /= prec_count
     mrecall /= recall_count
 
-    print(f"mIoU:\n\t{miou},\nmIoU CRM:{miou_crm}\nMean_Bbox_Recall:{mbbox_recall}Mean_Bbox_Precision:{mbbox_precision}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
+    print(f"mIoU:\n\t{miou},\nmIoU CRM:{miou_crm}\nMean_Bbox_Recall:{mbbox_recall}\nMean_Bbox_Precision:{mbbox_precision}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
