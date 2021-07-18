@@ -192,50 +192,58 @@ def find_bbox(point, labels, calibs):
 def bbox_recall(labels, idx_list):
     tp = 0
     fn = 0
-    dontcare = 0
+    dontcare_noncar = 0
     num_bbox = len(labels)
     for i,label in enumerate(labels):
-        if label['type'] != 'DontCare':
-            if idx_list[i] >0:
-                tp += 1
+        if label['type'] != b'DontCare':
+            if label['type'] == b'Car':
+                if idx_list[i] >0:
+                    tp += 1
+                else:
+                    fn += 1
             else:
-                fn += 1
+                dontcare_noncar += 1
         else:
-            dontcare += 1
+            dontcare_noncar += 1
 
-    if dontcare == num_bbox:
+    # no bbox to detect
+    if dontcare_noncar == num_bbox:
         return -2
     return tp/(tp+fn)
 
 def bbox_precision(labels, idx_list, fp):
     tp = 0
-    dontcare = 0
+    dontcare_noncar = 0
     num_bbox = len(labels)
     for i,label in enumerate(labels):
-        if label['type'] != 'DontCare':
-            if idx_list[i] >0:
-                tp += 1
+        if label['type'] != b'DontCare':
+            if label['type'] == b'Car':
+                if idx_list[i] >0:
+                    tp += 1
+            else:
+                dontcare_noncar += 1
+                if idx_list[i]>0:
+                    fp += 1
         else:
-            dontcare += 1
+            dontcare_noncar += 1
 
-    if dontcare == num_bbox:
-        return -2
-    if tp+fp == 0:
+    # no bbox to detect or no peak is detected
+    if dontcare_noncar == num_bbox or tp+fp == 0:
         return -2
     return tp/(tp+fp)
 
 def get_detected_bbox_num(labels, idx_list):
     tp = 0
-    dontcare = 0
+    dontcare_noncar = 0
     num_bbox = len(labels)
     for i,label in enumerate(labels):
-        if label['type'] != 'DontCare':
+        if label['type'] == b'Car':
             if idx_list[i] >0:
                 tp += 1
         else:
-            dontcare += 1
+            dontcare_noncar += 1
 
-    valid_bbox_num = num_bbox-dontcare
+    valid_bbox_num = num_bbox-dontcare_noncar
     detected_bbox_num = tp
     return detected_bbox_num, valid_bbox_num
 

@@ -302,10 +302,10 @@ def main() -> None:
     mrecall_crm /= r
     mprecision /= prec_count
     mrecall /= recall_count
-    bbox_detection_rate = total_bbox_num / total_detected_bbox_num
+    bbox_detection_rate = total_detected_bbox_num / total_bbox_num
     print(f"Bbox Detection Rate:{bbox_detection_rate}")
 
-    print(f"mIoU:\n\t{miou},\nmIoU CRM:{miou_crm}\nMean_Bbox_Recall:{mbbox_recall}\nMean_Bbox_Precision:{mbbox_precision}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
+    print(f"mIoU:\n{miou},\nmIoU CRM:{miou_crm}\nMean Bbox Recall:{mbbox_recall}\nMean Bbox Precision:{mbbox_precision}\nMean Precision:{mprecision}\nMean Recall:{mrecall}\nMean Precision CRM:{mprecision_crm}\nMean Recall CRM:{mrecall_crm}\nTotal Number of PRMs: {count}")
 
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     for r,miou_col in enumerate(miou):
