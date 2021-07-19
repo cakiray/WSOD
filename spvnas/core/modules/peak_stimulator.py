@@ -91,7 +91,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 prm = (prm-mins)/(maxs-mins)
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
-                prm[prm<0.05] = 0.0 # some thresholding
+                prm[prm<0.005] = 0.0 # some thresholding
 
             #segment ground to reduce false positives
             prm = utils.segment_ground(points=inputs.F, preds=prm, distance_threshold=0.15)
