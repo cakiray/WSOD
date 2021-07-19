@@ -227,27 +227,39 @@ def main() -> None:
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
+                points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
+                peak = points[peak_ind[2]] # indx is at 3th element of peak variable
 
-                peak = np.asarray(inputs.F[:,0:3].detach().cpu())[peak_ind[2]] # indx is at 3th element of peak variable
-                _, bbox_idx = utils.find_bbox(peak, labels, calibs)
-                if bbox_idx == -1:
+                # Find bbox that the peak belongs to
+                bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
+                if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
                     fp_bbox += 1
-                else:
-                    bbox_found_indicator[bbox_idx] = 1
+
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,4)
                 if prm.shape[1] >1:
                     prec = np.zeros(shape=(4,2))
                     recall = np.zeros(shape=(4,2))
+
                     for col in range(prm.shape[1]):
                         mask_pred = utils.generate_prm_mask(prm[:,col])
-                        iou_prec= utils.iou_precision(peak_ind, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
+                        iou_prec= utils.iou_precision(peak_ind, points=points,
                                                       preds=mask_pred, labels=labels, calibs=calibs, n_classes=2)
-                        iou_recall= utils.iou_recall(peak_ind, points=np.asarray(inputs.F[:,0:3].detach().cpu()),
+                        iou_recall= utils.iou_recall(peak_ind, points=points,
                                                      preds=mask_pred, labels=labels, calibs=calibs, n_classes=2)
                         prec[col] = iou_prec
                         recall[col] = iou_recall
-        
+
+                        # If peak belongs to a bbox
+                        if bbox_idx > -1:
+                            # generate mask for the bbox in interest
+                            prm_target = utils.generate_car_masks(points, bbox_label, calibs).reshape(-1)
+                            # if at least 1 channel of PRM has iou more that 50%, it would be true positive
+                            iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
+                            # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
+                            if iou_bbox[1] > 0.5:
+                                bbox_found_indicator[bbox_idx] = 1
+
                     if not np.isnan(np.sum(prec)):
                         mprecision += prec
                         prec_count += 1
