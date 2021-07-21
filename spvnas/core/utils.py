@@ -167,7 +167,7 @@ def iou_recall_crm(preds, targets,  n_classes=2):
         tp = (preds_inds[target_inds]).sum()
         fn = non_pred_inds[target_inds].sum()
         recall[cls] = float(tp / (tp+fn))
-
+        
     return recall
 
 def find_bbox(point, labels, calibs):
