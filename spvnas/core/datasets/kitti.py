@@ -137,7 +137,7 @@ class KITTIInternal:
         
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
-
+        labels_ = np.load( self.crm_pcs[index]).astype(float)
         if True:
             pcd=open3d.open3d.geometry.PointCloud()
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
@@ -145,6 +145,7 @@ class KITTIInternal:
                                                      ransac_n=100,
                                                      num_iterations=1000)
             block_ = block_[inliers]
+            labels_= labels_[inliers]
 
         if self.input_channels == 5:
             pcd=open3d.open3d.geometry.PointCloud()
@@ -158,7 +159,7 @@ class KITTIInternal:
             
             block_ = np.concatenate( (block_, ground_feature), axis=1)
         
-        labels_ = np.load( self.crm_pcs[index]).astype(float)
+
         if True:#'train' in self.split:
             # get the points only at front view
             # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
