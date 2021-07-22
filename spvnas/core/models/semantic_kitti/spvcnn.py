@@ -12,7 +12,12 @@ from torchsparse.point_tensor import PointTensor
 from torchsparse.utils.kernel_region import *
 from torchsparse.utils.helpers import *
 from types import MethodType
+
 from core.models.utils import *
+from core.modules.layers import *
+from core.modules.modules import *
+from core.modules.networks import *
+from core.modules.peak_backprop import *
 
 __all__ = ['SPVCNN']
 
@@ -178,6 +183,24 @@ class SPVCNN(nn.Module):
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
 
+@staticmethod
+def median_filter(input):
+    batch_size, num_channels, n = input.size()
+    threshold = torch.median(input.view(batch_size, num_channels, n), dim=2)
+    return threshold.contiguous().view(batch_size, num_channels, 1)
+
+    @staticmethod
+    def mean_filter(input):
+        # set non-zero to zero
+        input = torch.max(input,torch.tensor([0.]).to(input.device))
+        #get only positive values
+        input_nonzero = input[:,:,torch.nonzero(input)[:,2]]
+
+        batch_size, num_channels, n = input_nonzero.size()
+        threshold = torch.mean(input_nonzero.view(batch_size, num_channels, n), dim=2)
+        #print("thresh", threshold)
+        return threshold.contiguous().view(batch_size, num_channels, 1)
+
     #modify conv3d layers so that they have prehook and posthook
     # to get PRM nicer
     def _patch(self):
@@ -198,6 +221,7 @@ class SPVCNN(nn.Module):
             if isinstance(m, nn.BatchNorm1d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+
                 
     def change_last_layer(self, num_classes):
         # Freeze model weights
