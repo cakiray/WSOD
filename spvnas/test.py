@@ -25,7 +25,7 @@ from core.callbacks import MeanIoU, MSE
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration 
 
-from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best
+from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best, myspvcnn
 
 def main() -> None:
     dist.init()
@@ -69,15 +69,14 @@ def main() -> None:
 
 
     if 'spvnas' in args.name.lower():
-        model = spvnas_best(args.name, args.weights, configs)    
+        model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs)
     elif 'spvcnn' in args.name.lower():
-        model = spvcnn(args.name)
+        model = myspvcnn(configs=configs, weights=args.weights)
     elif 'mink' in args.name.lower():
         model = minkunet(args.name)
     else:
         raise NotImplementedError
-    #model.change_last_layer(configs.data.num_classes)
-    #model = builder.make_model()
+
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
         device_ids=[dist.local_rank()],

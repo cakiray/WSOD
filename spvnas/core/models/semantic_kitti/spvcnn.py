@@ -14,10 +14,7 @@ from torchsparse.utils.helpers import *
 
 from core.models.utils import *
 
-
 __all__ = ['SPVCNN']
-
-
 
 class BasicConvolutionBlock(nn.Module):
     def __init__(self, inc, outc, ks=3, stride=1, dilation=1):

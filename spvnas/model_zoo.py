@@ -146,3 +146,23 @@ def spvcnn(net_id, pretrained=True, **kwargs):
         )['model']
         model.load_state_dict(init)
     return model
+
+def myspvcnn(configs, weights, **kwargs):
+
+    if 'cr' in configs.model:
+        cr = configs.model.cr
+    else:
+        cr = 1.0
+    model = SPVCNN(
+        num_classes= configs.data.num_classes,
+        cr=cr,
+        pres=configs.dataset.voxel_size,
+        vres=configs.dataset.voxel_size
+    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+
+    dict_ = torch.load(weights)['model']
+    dict_correct_naming = dict()
+    for key in dict_:
+        dict_correct_naming[key.replace('module.','')] = dict_[key]
+    model.load_state_dict(dict_correct_naming)
+    return model
