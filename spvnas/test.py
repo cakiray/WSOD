@@ -68,11 +68,11 @@ def main() -> None:
             collate_fn=dataset[split].collate_fn)
 
 
-    if 'spvnas' in args.name.lower():
+    if 'spvnas' in configs.model.name:
         model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs)
-    elif 'spvcnn' in args.name.lower():
+    elif 'spvcnn' in configs.model.name:
         model = myspvcnn(configs=configs, weights=args.weights)
-    elif 'mink' in args.name.lower():
+    elif 'mink' in configs.model.name:
         model = minkunet(args.name)
     else:
         raise NotImplementedError
