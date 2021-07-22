@@ -32,6 +32,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('config', metavar='FILE', help='config file')
     parser.add_argument('--run-dir', metavar='DIR', help='run directory')
+    parser.add_argument('--name', type=str, help='model name')
+    parser.add_argument('--weights', type=str, help='path to pretrained model weights')
     args, opts = parser.parse_known_args()
 
     configs.load(args.config, recursive=True)
