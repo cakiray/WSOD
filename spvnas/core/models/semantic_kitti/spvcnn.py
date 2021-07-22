@@ -183,11 +183,11 @@ class SPVCNN(nn.Module):
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
 
-@staticmethod
-def median_filter(input):
-    batch_size, num_channels, n = input.size()
-    threshold = torch.median(input.view(batch_size, num_channels, n), dim=2)
-    return threshold.contiguous().view(batch_size, num_channels, 1)
+    @staticmethod
+    def median_filter(input):
+        batch_size, num_channels, n = input.size()
+        threshold = torch.median(input.view(batch_size, num_channels, n), dim=2)
+        return threshold.contiguous().view(batch_size, num_channels, 1)
 
     @staticmethod
     def mean_filter(input):
