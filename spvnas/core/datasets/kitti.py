@@ -13,6 +13,7 @@ import scipy.ndimage
 import torch
 from numba import jit
 import cv2
+import open3d
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
 
