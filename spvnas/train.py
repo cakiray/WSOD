@@ -11,7 +11,7 @@ import torch.nn
 import torch.utils.data
 from torchpack import distributed as dist
 from torchpack.callbacks import (InferenceRunner, MaxSaver, MinSaver,
-                                 Saver)
+                                 Saver, SaverRestore, Callbacks, TFEventWriter)
 from torchpack.callbacks.metrics import MeanSquaredError
 from torchpack.environ import auto_set_run_dir, set_run_dir
 from torchpack.utils.config import configs
@@ -112,6 +112,7 @@ def main() -> None:
                   ] + [
                       MinSaver(scalar='mse/test',name=dt_string, save_dir=configs.best_model ),
                       Saver(save_dir=configs.checkpoints),
+                      TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
                   ])
 
 if __name__ == '__main__':
