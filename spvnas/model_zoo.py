@@ -147,6 +147,33 @@ def spvcnn(net_id, pretrained=True, **kwargs):
         model.load_state_dict(init)
     return model
 
+def spvcnn_specialized(net_id, pretrained=True,  **kwargs):
+    url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'
+    net_config = json.load(open(
+        download_url(url_base + net_id + '/net.config', model_dir='.torch/spvnas_specialized/%s/' % net_id)
+    ))
+    input_channels = kwargs.get('input_channels', 4)
+    model = SPVNAS(
+        net_config['num_classes'],
+        input_channels = input_channels,
+        macro_depth_constraint=1,
+        pres=net_config['pres'],
+        vres=net_config['vres']
+    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+    model.manual_select(net_config)
+    model = model.determinize()
+
+    if pretrained:
+
+        dict_ = torch.load(kwargs['weights'])['model']
+        dict_correct_naming = dict()
+        for key in dict_:
+            dict_correct_naming[key.replace('module.','')] = dict_[key]
+        model.load_state_dict(dict_correct_naming)
+
+
+    return model
+
 def myspvcnn(configs, weights, **kwargs):
 
     if 'cr' in configs.model:

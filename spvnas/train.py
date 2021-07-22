@@ -20,6 +20,7 @@ from torchpack.utils.logging import logger
 from core import builder
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE
+from model_zoo import spvnas_specialized, spvcnn_specialized, myspvcnn
 
 # torchpack dist-run -np 1 python train.py configs/kittti/default.yaml
 def main() -> None:
@@ -70,7 +71,15 @@ def main() -> None:
             pin_memory=True,
             collate_fn=dataset[split].collate_fn)
 
-    model = builder.make_model()
+    #model = builder.make_model()
+    if 'spvnas' in args.name.lower():
+        model = spvnas_specialized(args.name, pretrained=False)
+    elif 'spvcnn' in args.name.lower():
+        model = spvcnn_specialized(args.name, weights=args.weights, pretrained=False)
+    else:
+        raise NotImplementedError
+    model.change_last_layer(configs.data.num_classes)
+
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
         device_ids=[dist.local_rank()],
