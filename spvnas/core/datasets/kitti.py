@@ -145,7 +145,7 @@ class KITTIInternal:
                                                      ransac_n=100,
                                                      num_iterations=10000)
 
-            print("inliers, total:", len(inliers), block_.size, block.shape[0] )
+            
             mask = np.ones(block_.shape[0], dtype=bool)
             mask[inliers] = False
             block_ = block_[mask]
@@ -153,11 +153,6 @@ class KITTIInternal:
             mask = np.ones(labels_.shape[0], dtype=bool)
             mask[inliers] = False
             labels_ = labels_[mask]
-
-
-            #block_ = block_[..., [i for i in range(len(block_)) if i not in inliers]]
-            #labels_ = labels_[..., [i for i in range(len(block_)) if i not in inliers]]
-            print("left:",len(block_) )
 
         if self.input_channels == 5:
             pcd=open3d.open3d.geometry.PointCloud()
