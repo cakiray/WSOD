@@ -143,14 +143,14 @@ class KITTIInternal:
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
             plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
                                                      ransac_n=100,
-                                                     num_iterations=100000)
+                                                     num_iterations=10000)
 
-            print("inliers, total:", len(inliers), len(block_) )
-            mask = np.ones(block_.size, dtype=bool)
+            print("inliers, total:", len(inliers), block_.size, block.shape[0] )
+            mask = np.ones(block_.shape[0], dtype=bool)
             mask[inliers] = False
             block_ = block_[mask]
 
-            mask = np.ones(labels_.size, dtype=bool)
+            mask = np.ones(labels_.shape[0], dtype=bool)
             mask[inliers] = False
             labels_ = labels_[mask]
 
