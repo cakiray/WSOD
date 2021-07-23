@@ -144,9 +144,19 @@ class KITTIInternal:
             plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
                                                      ransac_n=100,
                                                      num_iterations=100000)
+
             print("inliers, total:", len(inliers), len(block_) )
-            block_ = block_[..., [i for i in range(len(block_)) if i not in inliers]]
-            labels_ = labels_[..., [i for i in range(len(block_)) if i not in inliers]]
+            mask = np.ones(block_.size, dtype=bool)
+            mask[inliers] = False
+            block_ = block_[mask]
+
+            mask = np.ones(labels_.size, dtype=bool)
+            mask[inliers] = False
+            labels_ = labels_[mask]
+
+
+            #block_ = block_[..., [i for i in range(len(block_)) if i not in inliers]]
+            #labels_ = labels_[..., [i for i in range(len(block_)) if i not in inliers]]
             print("left:",len(block_) )
 
         if self.input_channels == 5:
