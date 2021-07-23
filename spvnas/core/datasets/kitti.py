@@ -143,9 +143,11 @@ class KITTIInternal:
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
             plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
                                                      ransac_n=100,
-                                                     num_iterations=1000)
-            block_ = block_[inliers]
-            labels_= labels_[inliers]
+                                                     num_iterations=100000)
+            print("inliers, total:", len(inliers), len(block_) )
+            block_ = block_[..., [i for i in range(len(block_)) if i not in inliers]]
+            labels_ = labels_[..., [i for i in range(len(block_)) if i not in inliers]]
+            print("left:",len(block_) )
 
         if self.input_channels == 5:
             pcd=open3d.open3d.geometry.PointCloud()
