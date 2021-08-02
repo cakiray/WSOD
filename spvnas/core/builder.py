@@ -24,6 +24,7 @@ def make_dataset() -> Dataset:
         dataset = KITTI(root=configs.dataset.root,
                         data_path=configs.dataset.data_path,
                         crm_path=configs.dataset.crm_path,
+                        planes_path = configs.dataset.planes_path,
                         num_points=configs.dataset.num_points,
                         voxel_size=configs.dataset.voxel_size,
                         quantization_size=configs.dataset.quantization_size,

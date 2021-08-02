@@ -20,7 +20,7 @@ from torchsparse.utils import sparse_collate_fn, sparse_quantize
 __all__ = ['KITTI']
 
 class KITTI(dict):
-    def __init__(self, root, data_path, crm_path, voxel_size,quantization_size, num_points, input_channels, **kwargs):
+    def __init__(self, root, data_path, crm_path, planes_path, voxel_size,quantization_size, num_points, input_channels, **kwargs):
         submit_to_server = kwargs.get('submit', False)
         sample_stride = kwargs.get('sample_stride', 1)
         google_mode = kwargs.get('google_mode', False)
@@ -31,6 +31,7 @@ class KITTI(dict):
                     KITTIInternal(root,
                                   data_path,
                                   crm_path,
+                                  planes_path,
                                   voxel_size,
                                   quantization_size,
                                   num_points,
@@ -42,6 +43,7 @@ class KITTI(dict):
                     KITTIInternal(root,
                                   data_path,
                                   crm_path,
+                                  planes_path,
                                   voxel_size,
                                   quantization_size,
                                   num_points,
@@ -55,6 +57,7 @@ class KITTI(dict):
                     KITTIInternal(root,
                                   data_path,
                                   crm_path,
+                                  planes_path,
                                   voxel_size,
                                   quantization_size,
                                   num_points,
@@ -66,6 +69,7 @@ class KITTI(dict):
                     KITTIInternal(root,
                                   data_path,
                                   crm_path,
+                                  planes_path,
                                   voxel_size,
                                   quantization_size,
                                   num_points,
@@ -81,6 +85,7 @@ class KITTIInternal:
                  root,
                  data_path,
                  crm_path,
+                 planes_path,
                  voxel_size,
                  quantization_size,
                  num_points,
@@ -96,6 +101,7 @@ class KITTIInternal:
         self.root = root
         self.data_path = data_path
         self.crm_path = crm_path
+        self.planes_path = planes_path
         self.split = split
         self.voxel_size = voxel_size
         self.quantization_size = quantization_size
@@ -107,13 +113,14 @@ class KITTIInternal:
         txt_path = '/'.join(self.data_path.split('/')[:-1])
         self.pcs = []
         self.crm_pcs = []
+        self.planes = []
         if split == 'train':
             train_idxs = open( os.path.join(root, txt_path, "train.txt") ).readlines()
             for idx in train_idxs:
                 idx = idx.strip()
                 self.pcs.append(os.path.join( self.root, self.data_path ,'%s.bin' % idx))
-                
                 self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
+                self.planes.append(os.path.join(self.root, self.planes_path, '%s.txt' % idx) )
         #elif split=="val":
         elif split=="test":
             val_idxs = open( os.path.join(root, txt_path, "val.txt") ).readlines()
@@ -121,6 +128,7 @@ class KITTIInternal:
                 idx = idx.strip()
                 self.pcs.append(os.path.join(self.root, self.data_path, '%s.bin' % idx))
                 self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
+                self.planes.append(os.path.join(self.root, self.planes_path, '%s.txt' % idx) )
         """elif split=='test':
             files = os.listdir(os.path.join(root, self.data_path) )
             for name in files:
@@ -138,22 +146,23 @@ class KITTIInternal:
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         labels_ = np.load( self.crm_pcs[index]).astype(float)
-        if False: #ground segmentation
-            pcd=open3d.open3d.geometry.PointCloud()
-            pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
-            plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
-                                                     ransac_n=100,
-                                                     num_iterations=1000)
 
-            
-            mask = np.ones(block_.shape[0], dtype=bool)
-            mask[inliers] = False
-            block_ = block_[mask]
+        """planes_model =  open(self.planes[index], 'r').readlines()[3].rstrip()
+        a,b,c,d = planes_model.split(' ')
+        mask = np.ones(block_.shape[0], dtype=bool)
+        plane_eq = a*block_[0] + b*block_[1] + c*block_[2] + d
+        mask[plane_eq==0] = False
+        block_ = block_[mask]
+        labels_ = labels_[mask]"""
 
-            mask = np.ones(labels_.shape[0], dtype=bool)
-            mask[inliers] = False
-            labels_ = labels_[mask]
-
+        if 'train' in self.split:
+            # get the points only at front view
+            # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
+            front_idxs = block_[:,0]>=0
+            block_ = block_[front_idxs] 
+            labels_ = labels_[front_idxs]
+                
+        """ 
         if self.input_channels == 5:
             pcd=open3d.open3d.geometry.PointCloud()
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
@@ -165,16 +174,7 @@ class KITTIInternal:
             ground_feature[inliers] = 0.0
             
             block_ = np.concatenate( (block_, ground_feature), axis=1)
-        
-
-        if True:#'train' in self.split:
-            # get the points only at front view
-            # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
-            front_idxs = block_[:,0]>=0
-            block_ = block_[front_idxs] 
-            labels_ = labels_[front_idxs]
-                
-        """
+        #Data augmentation?
         if 'train' in self.split:
             theta = np.random.uniform(0, 2 * np.pi)
             scale_factor = np.random.uniform(0.95, 1.05)
