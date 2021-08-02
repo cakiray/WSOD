@@ -155,5 +155,6 @@ class ShrinkageLoss(nn.Module):
         l = (x - y)
         l2 = l ** 2
         deniminator = 1 + torch.exp(self.a* (self.c-l))
-        return torch.mean(l2/deniminator)
-
+        loss = torch.mean(l2/deniminator)
+        print("criteroin " , l2, deniminator, loss)
+        return loss
