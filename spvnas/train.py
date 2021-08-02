@@ -19,7 +19,7 @@ from torchpack.utils.logging import logger
 
 from core import builder
 from core.trainers import SemanticKITTITrainer
-from core.callbacks import MeanIoU, MSE
+from core.callbacks import MeanIoU, MSE, Shrinkage
 from model_zoo import spvnas_specialized, spvcnn_specialized, myspvcnn
 
 # torchpack dist-run -np 1 python train.py configs/kittti/default.yaml
@@ -107,10 +107,10 @@ def main() -> None:
         num_epochs=configs.num_epochs,
         callbacks=[InferenceRunner(
             dataflow[split],
-            callbacks=[MSE(name=f'mse/{split}')])
+            callbacks=[Shrinkage(name=f'shrinkage/{split}')])
                       for split in ['test']
                   ] + [
-                      MinSaver(scalar='mse/test',name=dt_string, save_dir=configs.best_model ),
+                      MinSaver(scalar='shrinkage/test',name=dt_string, save_dir=configs.best_model ),
                       Saver(save_dir=configs.checkpoints),
                       TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
                   ])
