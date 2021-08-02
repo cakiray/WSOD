@@ -158,8 +158,9 @@ class ShrinkageLoss(nn.Module):
                           "Please ensure they have the same size.".format(x.size(), y.size()),
                           stacklevel=2)
         l = (x - y)
-        l2 = l ** 2
-        deniminator = 1 + torch.exp(self.a* (self.c-l))
-        loss = torch.mean(l2/deniminator)
+        l2 = torch.mean(l ** 2)
+        l_mean = torch.mean(l)
+        deniminator = 1 + torch.exp(self.a* (self.c-l_mean))
+        loss = l2/deniminator
         print("criteroin " , x, y, l, l2, deniminator, loss)
         return loss

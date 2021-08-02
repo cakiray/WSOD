@@ -34,9 +34,10 @@ class Shrinkage(Callback):
         targets = output_dict[self.target_tensor]
 
         l = (outputs - targets)
-        l2 = l ** 2
-        deniminator = 1 + torch.exp(self.a* (self.c-l))
-        error = torch.mean(l2/deniminator)
+        l2 = torch.mean(l ** 2)
+        l_mean = torch.mean(l)
+        deniminator = 1 + torch.exp(self.a* (self.c-l_mean))
+        error = l2/deniminator
 
         self.size += targets.size(0)
         self.errors += error.item() * targets.size(0)
