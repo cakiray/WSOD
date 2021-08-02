@@ -3,7 +3,7 @@ from typing import Any, Callable
 import torch
 from torch import nn
 import torch.nn.functional as F
-
+import warnings
 
 try:
     from itertools import ifilterfalse
@@ -152,9 +152,14 @@ class ShrinkageLoss(nn.Module):
         self.c = c
 
     def forward(self, x, y):
+        if not (x.size() == y.size()):
+            warnings.warn("Using a target size ({}) that is different to the input size ({}). "
+                          "This will likely lead to incorrect results due to broadcasting. "
+                          "Please ensure they have the same size.".format(x.size(), y.size()),
+                          stacklevel=2)
         l = (x - y)
         l2 = l ** 2
         deniminator = 1 + torch.exp(self.a* (self.c-l))
         loss = torch.mean(l2/deniminator)
-        print("criteroin " , l2, deniminator, loss)
+        print("criteroin " , x, y, l, l2, deniminator, loss)
         return loss
