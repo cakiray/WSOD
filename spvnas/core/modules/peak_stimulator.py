@@ -61,7 +61,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     peak_response_maps = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
     i = 0
-    #print("max in output ", torch.max(outputs))
+    #print("max min in output ", torch.max(outputs), torch.min(outputs))
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
         

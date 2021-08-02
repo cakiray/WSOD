@@ -138,12 +138,12 @@ class KITTIInternal:
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         labels_ = np.load( self.crm_pcs[index]).astype(float)
-        if True:
+        if False: #ground segmentation
             pcd=open3d.open3d.geometry.PointCloud()
             pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
             plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
                                                      ransac_n=100,
-                                                     num_iterations=10000)
+                                                     num_iterations=1000)
 
             
             mask = np.ones(block_.shape[0], dtype=bool)

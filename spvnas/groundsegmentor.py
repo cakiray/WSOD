@@ -5,9 +5,9 @@ import os
 from torchpack.utils.config import configs
 
 parser = argparse.ArgumentParser()
-parser.add_argument('configs', metavar='configs', help='configs file path')
+parser.add_argument('configs', metavar='FILE', help='configs file path')
 args, opts = parser.parse_known_args()
-configs.load(args.config, recursive=True)
+configs.load(args.configs, recursive=True)
 configs.update(opts)
 
 pcs_root = os.path.join(configs.dataset.root, configs.dataset.data_path)
@@ -26,7 +26,7 @@ crmfiles = os.listdir(crm_pcs_root)
 pcsfiles.sort()
 crmfiles.sort()
 
-for i in len(pcsfiles):
+for i in range(len(pcsfiles)):
     pc_file = open ( os.path.join(pcs_root,pcsfiles[i]), 'rb')
     block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
     labels_ = np.load( os.path.join(crm_pcs_root,crmfiles[i] )).astype(float)
