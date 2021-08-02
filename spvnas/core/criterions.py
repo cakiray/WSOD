@@ -11,7 +11,7 @@ except ImportError:
     from itertools import filterfalse as ifilterfalse
 
 
-__all__ = ['Lovasz_softmax', 'MixLovaszCrossEntropy']
+__all__ = ['Lovasz_softmax', 'MixLovaszCrossEntropy', 'ShrinkageLoss']
 
 
 def isnan(x):
@@ -143,4 +143,17 @@ class MixLovaszCrossEntropy(nn.Module):
         lovasz = self.lovasz(F.softmax(x, 1), y)
         ce = self.ce(x, y)
         return lovasz + ce
+
+class ShrinkageLoss(nn.Module):
+
+    def __init__(self, a=10.0, c=0.2):
+        super(ShrinkageLoss,  self).__init__()
+        self.a = a
+        self.c = c
+
+    def forward(self, x, y):
+        l = (x - y)
+        l2 = l ** 2
+        deniminator = 1 + torch.exp(self.a* (self.c-l))
+        return torch.mean(l2/deniminator)
 

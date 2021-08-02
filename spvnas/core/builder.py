@@ -72,6 +72,9 @@ def make_criterion() -> Callable:
         criterion = MixLovaszCrossEntropy(
             ignore_index=configs.criterion.ignore_index
         )
+    elif configs.criterion.name == 'shrinkage':
+        from core.criterions import ShrinkageLoss
+        criterion = ShrinkageLoss()
     else:
         raise NotImplementedError(configs.criterion.name)
     return criterion
