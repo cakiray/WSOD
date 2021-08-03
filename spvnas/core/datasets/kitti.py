@@ -156,7 +156,7 @@ class KITTIInternal:
         block_ = block_[mask]
         labels_ = labels_[mask]"""
 
-        if 'train' in self.split:
+        if True:# 'train' in self.split:
             # get the points only at front view
             # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
             front_idxs = block_[:,0]>=0
