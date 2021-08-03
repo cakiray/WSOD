@@ -60,7 +60,7 @@ class MSE(Callback):
 
 
     def _before_epoch(self):
-        self.size = 0
+        #self.size = 0
         self.errors = 0
 
     def _after_step(self, output_dict: Dict[str, Any]) -> None:
@@ -68,27 +68,27 @@ class MSE(Callback):
         targets = output_dict[self.target_tensor]
 
         error = torch.mean((outputs - targets) ** 2)
-        self.size += targets.size(0)
-        self.errors += error.item() * targets.size(0)
+        #self.size += targets.size(0)
+        #self.errors += error.item() * targets.size(0)
+        self.errors += error.item()
 
     def _after_epoch(self) -> None:
-        self.size = dist.allreduce(self.size, reduction='sum')
-        self.errors = dist.allreduce(self.errors, reduction='sum')
+        #self.size = dist.allreduce(self.size, reduction='sum')
+        self.errors = dist.allreduce(self.errors, reduction='mean')
         if hasattr(self, 'trainer') and hasattr(self.trainer, 'summary'):
-            self.trainer.summary.add_scalar(self.name, self.errors / self.size)
+            self.trainer.summary.add_scalar(self.name, self.errors )
 
 class MTE(Callback):
     def __init__(self,
                  output_tensor: str = 'outputs',
                  target_tensor: str = 'targets',
-                 name: str = 'mse') -> None:
+                 name: str = 'mte') -> None:
         self.name = name
         self.output_tensor = output_tensor
         self.target_tensor = target_tensor
 
 
     def _before_epoch(self):
-        self.size = 0
         self.errors = 0
 
     def _after_step(self, output_dict: Dict[str, Any]) -> None:
@@ -96,12 +96,10 @@ class MTE(Callback):
         targets = output_dict[self.target_tensor]
 
         error = torch.mean((outputs - targets) ** 3)
-        self.size += targets.size(0)
-        self.errors += error.item() * targets.size(0)
+        self.errors += error.item()
 
     def _after_epoch(self) -> None:
-        self.size = dist.allreduce(self.size, reduction='sum')
-        self.errors = dist.allreduce(self.errors, reduction='sum')
+        self.errors = dist.allreduce(self.errors, reduction='mean')
         if hasattr(self, 'trainer') and hasattr(self.trainer, 'summary'):
             self.trainer.summary.add_scalar(self.name, self.errors / self.size)
 
