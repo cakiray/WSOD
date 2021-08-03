@@ -52,6 +52,8 @@ class SemanticKITTITrainer(Trainer):
             self.optimizer.step()
             self.scheduler.step()
         else:
+            pass
+            """
             #convertion from voxelized data to original size
             invs = feed_dict['inverse_map']
             all_labels = feed_dict['targets_mapped']
@@ -68,8 +70,8 @@ class SemanticKITTITrainer(Trainer):
                 _targets.append(targets_mapped)
             outputs = torch.cat(_outputs, 0)
             targets = torch.cat(_targets, 0)                
-        #print(torch.min(outputs.cpu()), torch.max(outputs.cpu()))
-
+            #print(torch.min(outputs.cpu()), torch.max(outputs.cpu()))
+            """
         return {'outputs': outputs, 'targets': targets}
 
     def _after_epoch(self) -> None:
