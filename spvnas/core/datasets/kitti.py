@@ -147,6 +147,7 @@ class KITTIInternal:
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
         labels_ = np.load( self.crm_pcs[index]).astype(float)
 
+
         """planes_model =  open(self.planes[index], 'r').readlines()[3].rstrip()
         a,b,c,d = planes_model.split(' ')
         mask = np.ones(block_.shape[0], dtype=bool)

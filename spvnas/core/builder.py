@@ -67,6 +67,9 @@ def make_criterion() -> Callable:
         criterion = nn.CrossEntropyLoss(ignore_index=configs.criterion.ignore_index)
     elif configs.criterion.name == 'mse':
         criterion = nn.MSELoss()
+    elif configs.criterion.name == 'mte':
+        from core.criterions import MTE
+        criterion = MTE()
     elif configs.criterion.name == 'lovasz':
         from core.criterions import MixLovaszCrossEntropy
         criterion = MixLovaszCrossEntropy(

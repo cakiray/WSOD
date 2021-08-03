@@ -11,7 +11,7 @@ except ImportError:
     from itertools import filterfalse as ifilterfalse
 
 
-__all__ = ['Lovasz_softmax', 'MixLovaszCrossEntropy', 'ShrinkageLoss']
+__all__ = ['Lovasz_softmax', 'MixLovaszCrossEntropy', 'ShrinkageLoss', 'MTE']
 
 
 def isnan(x):
@@ -164,3 +164,19 @@ class ShrinkageLoss(nn.Module):
         loss = l2/deniminator
         print("criteroin " , x, y, l, l2, deniminator, loss)
         return loss
+
+class MTE(nn.Module):
+
+    def __init__(self):
+        super(MTE,  self).__init__()
+
+
+    def forward(self, x, y):
+        if not (x.size() == y.size()):
+            warnings.warn("Using a target size ({}) that is different to the input size ({}). "
+                          "This will likely lead to incorrect results due to broadcasting. "
+                          "Please ensure they have the same size.".format(x.size(), y.size()),
+                          stacklevel=2)
+        l = (x - y)
+        l3 = torch.mean(l ** 3)
+        return l3
