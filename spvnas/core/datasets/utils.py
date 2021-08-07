@@ -1,14 +1,11 @@
 import os
 import numpy as np
 
-def generate_CRM_wfiles(radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
+def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scale_factor ):
     vehicles = [ b'Car']
 
     labels = read_labels( labels_path )
-    points = read_points( points_path )
     calibs = read_calibs( calibs_path)
-
-    points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
     map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
     for label in labels:
         if label['type'] in vehicles:
