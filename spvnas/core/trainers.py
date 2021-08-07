@@ -95,7 +95,7 @@ class SemanticKITTITrainer(Trainer):
     def _before_step(self, feed_dict: Dict[str, Any]) -> None:
         _inputs = dict()
         for key, value in feed_dict.items():
-            if not 'name' in key:
+            if key not in ['name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
         calibs = _inputs['calibs']
