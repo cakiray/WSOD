@@ -164,8 +164,8 @@ def main() -> None:
             #print("peak len", len( peak_list))
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            
             """ 
+            print("\ncurrent file: ", filename) 
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output

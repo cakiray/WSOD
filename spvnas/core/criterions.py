@@ -146,7 +146,7 @@ class MixLovaszCrossEntropy(nn.Module):
 
 class ShrinkageLoss(nn.Module):
 
-    def __init__(self, a=2.0, c=0.2):
+    def __init__(self, a=10.0, c=0.2):
         super(ShrinkageLoss,  self).__init__()
         self.a = a
         self.c = c
@@ -157,7 +157,7 @@ class ShrinkageLoss(nn.Module):
                           "This will likely lead to incorrect results due to broadcasting. "
                           "Please ensure they have the same size.".format(x.size(), y.size()),
                           stacklevel=2)
-        l = (x - y)
+        l = torch.abs(x - y)
         #l2 = torch.mean(l ** 2)
         l_mean = torch.mean(l)
         #deniminator = 1 + torch.exp(self.a* (self.c-l_mean))
@@ -181,8 +181,7 @@ class MTE(nn.Module):
                           "This will likely lead to incorrect results due to broadcasting. "
                           "Please ensure they have the same size.".format(x.size(), y.size()),
                           stacklevel=2)
-        
-        
-        l = (x - y)
+
+        l = torch.abs(x - y)
         l3 = torch.mean(l ** 4)
         return l3
