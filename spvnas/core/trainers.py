@@ -36,7 +36,7 @@ class SemanticKITTITrainer(Trainer):
     def _run_step(self, feed_dict: Dict[str, Any]) -> Dict[str, Any]:   
         _inputs = dict()
         for key, value in feed_dict.items():
-            if not 'name' in key:
+            if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
 
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
@@ -103,7 +103,7 @@ class SemanticKITTITrainer(Trainer):
             if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
         #inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
-        points = _inputs['lidar'].F
+        points = _inputs['lidar'].F.cpu()
         calibs = feed_dict['calibs']
         labels = feed_dict['labels']
         rot_mat = feed_dict['rot_mat']
@@ -112,20 +112,21 @@ class SemanticKITTITrainer(Trainer):
         pc_files = feed_dict['pc_file']
         start = 0
         for i in range(len(calibs)):
-            point = points[start:subsize+start, :]
             calib = calibs[i]
             label = labels[i]
             rot_matrix = rot_mat[i]
             scale_fac = scale_factor[i]
             subsize = subsizes[i]
-            print(label,  feed_dict['targets'].F.shape, subsize)
+            point = np.asarray(points[start:subsize+start, :])
+
+            #print(label,  feed_dict['targets'].F.shape, subsize)
             radius = int ((self.num_epochs-self.epoch_num) / 2)
             if radius<2:
                 radius=2
             crm_target = generate_CRM_wfiles(radius, points = point, labels_path=label,
                                              calibs_path=calib, rot_mat=rot_matrix, scale_factor=scale_fac)
-            #device = torch.device("cuda:0")
-            print("crm", crm_target.shape)
+            
+            #print("crm", crm_target.shape)
             feed_dict['targets'].F[start:subsize+start, :] = torch.from_numpy(crm_target).to(feed_dict['targets'].F)
             start = subsize
 
