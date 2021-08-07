@@ -1,7 +1,60 @@
 import os
 import numpy as np
 
+def generate_CRM_wfiles(radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
+    vehicles = [ b'Car']
 
+    labels = read_labels( labels_path )
+    points = read_points( points_path )
+    calibs = read_calibs( calibs_path)
+
+    points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
+    map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
+    for label in labels:
+        if label['type'] in vehicles:
+            # x -> l, y -> w, z -> h
+            # Convert camera(image) coordinates to laser point cloud coordinates in meters
+            center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
+            center = np.dot(center, rot_mat) * scale_factor
+
+            # Center point
+            x = center[0][0]
+            y = center[0][1]
+            z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
+            center = [x,y,z]
+
+            crm =  get_distance(points, center, _in3d = False)
+            crm =  standardize(crm, threshold=radius)
+            crm = substact_1(crm)
+
+            map += crm
+
+    return map
+
+def generate_CRM(radius, labels, points, calibs, rot_mat, scale_factor ):
+    vehicles = [ b'Car']
+    points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
+    map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
+    for label in labels:
+        if label['type'] in vehicles:
+            # x -> l, y -> w, z -> h
+            # Convert camera(image) coordinates to laser point cloud coordinates in meters
+            center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
+            center = np.dot(center, rot_mat) * scale_factor
+
+            # Center point
+            x = center[0][0]
+            y = center[0][1]
+            z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
+            center = [x,y,z]
+
+            crm =  get_distance(points, center, _in3d = False)
+            crm =  standardize(crm, threshold=radius)
+            crm = substact_1(crm)
+
+            map += crm
+
+    return map
 
 def read_labels( label_path):
     label = np.loadtxt(label_path,

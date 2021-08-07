@@ -91,3 +91,23 @@ class SemanticKITTITrainer(Trainer):
         
     def _load_previous_checkpoint(self, checkpoint_path: str) -> None:
         pass
+
+    def _before_step(self, feed_dict: Dict[str, Any]) -> None:
+        _inputs = dict()
+        for key, value in feed_dict.items():
+            if not 'name' in key:
+                _inputs[key] = value.cuda()
+        inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
+        calibs = _inputs['calibs']
+        labels = _inputs['labels']
+        rot_mat = _inputs['rot_mat']
+        scale_factor = _inputs['scale_factor']
+        from core.datasets.utils import genereta_CRM
+
+        radius = int ((self.num_epochs-self.epoch_num) / 2)
+        if radius<2:
+            radius=2
+        crm_target = genereta_CRM(radius, labels=labels, points=inputs.F, calibs=calibs, rot_mat=rot_mat, scale_factor=scale_factor)
+        feed_dict['targets'].F = crm_target
+
+

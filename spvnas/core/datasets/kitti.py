@@ -163,40 +163,7 @@ class KITTIInternal:
     def set_angle(self, angle):
         self.angle = angle
 
-    def generate_CRM(self, radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
-        vehicles = [ b'Car']
-
-        labels = read_labels( labels_path )
-        points = read_points( points_path )
-        calibs = read_calibs( calibs_path)
-
-        points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
-        map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
-        for label in labels:
-            if label['type'] in vehicles:
-                # x -> l, y -> w, z -> h
-                # Convert camera(image) coordinates to laser point cloud coordinates in meters
-                center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
-                center = np.dot(center, rot_mat) * scale_factor
-
-                # Center point
-                x = center[0][0]
-                y = center[0][1]
-                z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
-                center = [x,y,z]
-
-                crm =  get_distance(points, center, _in3d = False)
-                crm =  standardize(crm, threshold=radius)
-                crm = substact_1(crm)
-
-                map += crm
-
-        return map
-
     def align_pcd(self, pc_file, plane_file):
-        #def vector_angle(u, v):
-        #    return np.arccos(np.dot(u,v) / (np.linalg.norm(u)* np.linalg.norm(v)))
-
         pc_file = open ( pc_file, 'rb')
         points = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
 
@@ -238,6 +205,8 @@ class KITTIInternal:
     def __getitem__(self, index):
 
         block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
+        calibs = read_calibs( self.calibs[index])
+        labels = read_labels(self.labels[index])
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
 
         # Data augmentation
@@ -256,7 +225,7 @@ class KITTIInternal:
 
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
-        crm_target_ = self.generate_CRM(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
+        crm_target_ = generate_CRM(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
                                    rot_mat = rot_mat, scale_factor =scale_factor)
 
         if True:# 'train' in self.split:
@@ -307,6 +276,10 @@ class KITTIInternal:
             'targets': crm_target,
             'targets_mapped': crm_target_,
             'inverse_map': inverse_map,
+            'calibs': calibs,
+            'labels': labels,
+            'rot_mat': rot_mat,
+            'scale_factor': scale_factor,
             'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
         }
 
