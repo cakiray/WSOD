@@ -11,32 +11,34 @@ train:
 dataset:
   name: kitti
   root: /data
-  data_path: dataset/kitti/object/training/velodyne
-  crm_path: Ezgi/center_response_map_r2
+  data_path: dataset/kitti/object/training/velodyne_gs
+  crm_path: Ezgi/center_response_map_r2_gs
+  planes_path: Ezgi/planes
   num_points: 20000
   voxel_size: 0.05
   quantization_size: 3
   
-num_epochs: 50
+num_epochs: 20
 prm:
   win_size: 5
-  peak_threshold: 0.3
+  peak_threshold: 0.15
 
-batch_size: 2
-batch_norm: false
+batch_size: 8
+batch_norm: true
 workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
-tfeventname: /lr0,1-r2
-outputs: /data/Ezgi/outputs_r2
+tfeventname: /lr0,1-bs8-r2-train-gs-shrinkage
+
+outputs: /data/Ezgi/r2
 
 model:
   name: spvnas
   no_bn: false
 
 criterion:
-  name: mse
+  name: shrinkage
 
 optimizer:
   name: adam
