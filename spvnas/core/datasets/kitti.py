@@ -16,11 +16,12 @@ import cv2
 import open3d
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
+import utils
 
 __all__ = ['KITTI']
 
 class KITTI(dict):
-    def __init__(self, root, data_path, crm_path, planes_path, voxel_size,quantization_size, num_points, input_channels, **kwargs):
+    def __init__(self, radius, root, data_path, crm_path, labels_path, calibs_path, planes_path, voxel_size,quantization_size, num_points, input_channels, **kwargs):
         submit_to_server = kwargs.get('submit', False)
         sample_stride = kwargs.get('sample_stride', 1)
         google_mode = kwargs.get('google_mode', False)
@@ -28,9 +29,12 @@ class KITTI(dict):
         if submit_to_server:
             super(KITTI, self).__init__({
                 'train':
-                    KITTIInternal(root,
+                    KITTIInternal(radius,
+                                  root,
                                   data_path,
                                   crm_path,
+                                  labels_path,
+                                  calibs_path,
                                   planes_path,
                                   voxel_size,
                                   quantization_size,
@@ -40,9 +44,12 @@ class KITTI(dict):
                                   split='train',
                                   submit=True),
                 'test':
-                    KITTIInternal(root,
+                    KITTIInternal(radius,
+                                  root,
                                   data_path,
                                   crm_path,
+                                  labels_path,
+                                  calibs_path,
                                   planes_path,
                                   voxel_size,
                                   quantization_size,
@@ -54,9 +61,12 @@ class KITTI(dict):
         else:
             super(KITTI, self).__init__({
                 'train':
-                    KITTIInternal(root,
+                    KITTIInternal(radius,
+                                  root,
                                   data_path,
                                   crm_path,
+                                  labels_path,
+                                  calibs_path,
                                   planes_path,
                                   voxel_size,
                                   quantization_size,
@@ -66,9 +76,12 @@ class KITTI(dict):
                                   split='train',
                                   google_mode=google_mode),
                 'test':
-                    KITTIInternal(root,
+                    KITTIInternal(radius,
+                                  root,
                                   data_path,
                                   crm_path,
+                                  labels_path,
+                                  calibs_path,
                                   planes_path,
                                   voxel_size,
                                   quantization_size,
@@ -82,9 +95,12 @@ class KITTI(dict):
 
 class KITTIInternal:
     def __init__(self,
+                 radius,
                  root,
                  data_path,
                  crm_path,
+                 labels_path,
+                 calibs_path,
                  planes_path,
                  voxel_size,
                  quantization_size,
@@ -98,9 +114,12 @@ class KITTIInternal:
             trainval = True
         else:
             trainval = False
+        self.radius = radius
         self.root = root
         self.data_path = data_path
         self.crm_path = crm_path
+        self.labels_path = labels_path
+        self.calibs_path = calibs_path
         self.planes_path = planes_path
         self.split = split
         self.voxel_size = voxel_size
@@ -114,6 +133,8 @@ class KITTIInternal:
         self.pcs = []
         self.crm_pcs = []
         self.planes = []
+        self.labels = []
+        self.calibs = []
         if split == 'train':
             train_idxs = open( os.path.join(root, txt_path, "train.txt") ).readlines()
             for idx in train_idxs:
@@ -121,6 +142,8 @@ class KITTIInternal:
                 self.pcs.append(os.path.join( self.root, self.data_path ,'%s.bin' % idx))
                 self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
                 self.planes.append(os.path.join(self.root, self.planes_path, '%s.txt' % idx) )
+                self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
+                self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
         #elif split=="val":
         elif split=="test":
             val_idxs = open( os.path.join(root, txt_path, "val.txt") ).readlines()
@@ -129,6 +152,8 @@ class KITTIInternal:
                 self.pcs.append(os.path.join(self.root, self.data_path, '%s.bin' % idx))
                 self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%s.npy' % idx))
                 self.planes.append(os.path.join(self.root, self.planes_path, '%s.txt' % idx) )
+                self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
+                self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
         """elif split=='test':
             files = os.listdir(os.path.join(root, self.data_path) )
             for name in files:
@@ -145,23 +170,33 @@ class KITTIInternal:
         
         pc_file = open ( self.pcs[index], 'rb')
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
-        labels_ = np.load( self.crm_pcs[index]).astype(float)
+        #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
 
+        # Data augmentation
+        scale_factor = 1.0
+        rot_mat = np.array([[1,1, 0],
+                            [1,1, 0],
+                            [0, 0, 1]])
 
-        """planes_model =  open(self.planes[index], 'r').readlines()[3].rstrip()
-        a,b,c,d = planes_model.split(' ')
-        mask = np.ones(block_.shape[0], dtype=bool)
-        plane_eq = a*block_[0] + b*block_[1] + c*block_[2] + d
-        mask[plane_eq==0] = False
-        block_ = block_[mask]
-        labels_ = labels_[mask]"""
+        if 'train' in self.split:
+            theta = np.random.uniform(0, 2 * np.pi)
+            scale_factor = np.random.uniform(0.95, 1.05) # a float number
+            rot_mat = np.array([[np.cos(theta),
+                                 np.sin(theta), 0],
+                                [-np.sin(theta),
+                                 np.cos(theta), 0], [0, 0, 1]])
+
+            block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
+
+        crm_target_ = generate_CRM(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
+                                   rot_mat = rot_mat, scale_factor =scale_factor)
 
         if True:# 'train' in self.split:
             # get the points only at front view
             # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
             front_idxs = block_[:,0]>=0
             block_ = block_[front_idxs] 
-            labels_ = labels_[front_idxs]
+            crm_target_ = crm_target_[front_idxs]
                 
         """ 
         if self.input_channels == 5:
@@ -201,7 +236,7 @@ class KITTIInternal:
 
         inds, labels, inverse_map = sparse_quantize(pc_,
                                                     feat_,
-                                                    labels_,
+                                                    crm_target_,
                                                     return_index=True,
                                                     return_invs=True,
                                                     quantization_size=self.quantization_size)
@@ -212,19 +247,16 @@ class KITTIInternal:
 
         pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
         feat = feat_[inds]
-        labels = labels_[inds]
+        crm_target = crm_target_[inds]
         lidar = SparseTensor(feat, pc) #unique
-        labels = SparseTensor(labels, pc) #unique
-        labels_ = SparseTensor(labels_, pc_) #voxelized original
+        crm_target = SparseTensor(crm_target, pc) #unique
+        crm_target_ = SparseTensor(crm_target_, pc_) #voxelized original
         inverse_map = SparseTensor(inverse_map, pc_) #voxelized orig
-        
-        #print("\nname: ", self.pcs[index].split('/')[-1])
-        #print("size unique, original: ", pc.shape, pc_.shape)
         
         return {
             'lidar': lidar,
-            'targets': labels,
-            'targets_mapped': labels_,
+            'targets': crm_target,
+            'targets_mapped': crm_target_,
             'inverse_map': inverse_map,
             'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
         }
@@ -233,3 +265,34 @@ class KITTIInternal:
     @staticmethod
     def collate_fn(inputs):
         return sparse_collate_fn(inputs)
+
+
+def generate_CRM( radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
+    vehicles = [ b'Car']
+
+    labels = utils.read_labels( labels_path )
+    points = utils.read_points( points_path )
+    calibs = utils.read_calibs( calibs_path)
+
+    points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
+    map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
+    for label in labels:
+        if label['type'] in vehicles:
+            # x -> l, y -> w, z -> h
+            # Convert camera(image) coordinates to laser point cloud coordinates in meters
+            center = utils.project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
+            center = np.dot(center, rot_mat) * scale_factor
+
+            # Center point
+            x = center[0][0]
+            y = center[0][1]
+            z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
+            center = [x,y,z]
+
+            crm =  utils.get_distance(points, center, _in3d = False)
+            crm =  utils.standardize(crm, threshold=radius)
+            crm = utils.substact_1(crm)
+
+            map += crm
+
+    return map

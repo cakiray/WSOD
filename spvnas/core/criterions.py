@@ -184,6 +184,5 @@ class MTE(nn.Module):
         
         
         l = (x - y)
-        
         l3 = torch.mean(l ** 4)
         return l3
