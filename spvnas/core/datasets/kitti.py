@@ -276,8 +276,8 @@ class KITTIInternal:
             'targets': crm_target,
             'targets_mapped': crm_target_,
             'inverse_map': inverse_map,
-            'calibs': calibs,
-            'labels': instance_labels,
+            'calibs': self.calibs[index],
+            'labels': self.labels[index],
             'rot_mat': rot_mat,
             'scale_factor': scale_factor,
             'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 

@@ -102,12 +102,12 @@ class SemanticKITTITrainer(Trainer):
         labels = _inputs['labels']
         rot_mat = _inputs['rot_mat']
         scale_factor = _inputs['scale_factor']
-        from core.datasets.utils import genereta_CRM
+        from core.datasets.utils import generate_CRM_wfiles
 
         radius = int ((self.num_epochs-self.epoch_num) / 2)
         if radius<2:
             radius=2
-        crm_target = genereta_CRM(radius, labels=labels, points=inputs.F, calibs=calibs, rot_mat=rot_mat, scale_factor=scale_factor)
+        crm_target = generate_CRM_wfiles(radius, labels_path=labels, points_path=inputs['name'], calibs_path=calibs, rot_mat=rot_mat, scale_factor=scale_factor)
         feed_dict['targets'].F = crm_target
 
 
