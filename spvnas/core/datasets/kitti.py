@@ -278,6 +278,7 @@ class KITTIInternal:
             'inverse_map': inverse_map,
             'calibs': self.calibs[index],
             'labels': self.labels[index],
+            'pc_file': self.pcs[index],
             'rot_mat': rot_mat,
             'scale_factor': scale_factor,
             'subsize': len(inds),

@@ -100,29 +100,28 @@ class SemanticKITTITrainer(Trainer):
 
         _inputs = dict()
         for key, value in feed_dict.items():
-            if key not in ['subsize', 'file_name','calibs','labels','rot_mat', 'scale_factor']:
+            if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
         #inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
         calibs = feed_dict['calibs']
         labels = feed_dict['labels']
-        points_fn = feed_dict['file_name']
         rot_mat = feed_dict['rot_mat']
         scale_factor = feed_dict['scale_factor']
         subsizes = feed_dict['subsize']
+        pc_files = feed_dict['pc_file']
         start = 0
-        for i in len(calibs):
-            print(len(labels), feed_dict['targets'].F.shape, len(calibs))
+        for i in range(len(calibs)):
+            pc_file = pc_files[i]
             calib = calibs[i]
             label = labels[i]
-            point_fn = points_fn[i]
             rot_matrix = rot_mat[i]
             scale_fac = scale_factor[i]
             subsize = subsizes[i]
-
+            print(label,  feed_dict['targets'].F.shape)
             radius = int ((self.num_epochs-self.epoch_num) / 2)
             if radius<2:
                 radius=2
-            crm_target = generate_CRM_wfiles(radius, labels_path=label, points_path=point_fn,
+            crm_target = generate_CRM_wfiles(radius, labels_path=label, points_path=pc_file,
                                              calibs_path=calib, rot_mat=rot_matrix, scale_factor=scale_fac)
             feed_dict['targets'].F[start:subsize+start, :] = crm_target
             start = subsize
