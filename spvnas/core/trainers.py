@@ -95,19 +95,21 @@ class SemanticKITTITrainer(Trainer):
     def _before_step(self, feed_dict: Dict[str, Any]) -> None:
         _inputs = dict()
         for key, value in feed_dict.items():
-            if key not in ['name','calibs','labels','rot_mat', 'scale_factor']:
+            if key not in ['file_name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
-        calibs = _inputs['calibs']
-        labels = _inputs['labels']
-        rot_mat = _inputs['rot_mat']
-        scale_factor = _inputs['scale_factor']
+        calibs = feed_dict['calibs']
+        labels = feed_dict['labels']
+        points = feed_dict['file_name']
+        rot_mat = feed_dict['rot_mat']
+        scale_factor = feed_dict['scale_factor']
+        
         from core.datasets.utils import generate_CRM_wfiles
-
+        print(len(labels), inputs.F.shape,feed_dict['targets'].F.shape, len(calibs))
         radius = int ((self.num_epochs-self.epoch_num) / 2)
         if radius<2:
             radius=2
-        crm_target = generate_CRM_wfiles(radius, labels_path=labels, points_path=inputs['name'], calibs_path=calibs, rot_mat=rot_mat, scale_factor=scale_factor)
+        crm_target = generate_CRM_wfiles(radius, labels_path=labels, points_path=points, calibs_path=calibs, rot_mat=rot_mat, scale_factor=scale_factor)
         feed_dict['targets'].F = crm_target
 
 

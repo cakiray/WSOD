@@ -60,7 +60,7 @@ def read_labels( label_path):
     label = np.loadtxt(label_path,
                        dtype={'names': ('type', 'truncated', 'occuluded', 'alpha', 'xmin', 'ymin', 'xmax', 'ymax', 'h', 'w', 'l', 'x', 'y', 'z','rotation_y'),
                               'formats': ('S14', 'float', 'float', 'float', 'float', 'float', 'float', 'float','float', 'float', 'float', 'float', 'float', 'float', 'float')})
-
+    
     if label.size == 1:
         label = label[np.newaxis]
 
