@@ -13,6 +13,8 @@ dataset:
   root: /data
   data_path: dataset/kitti/object/training/velodyne_gs
   crm_path: Ezgi/center_response_map_r2_gs
+  labels_path: dataset/kitti/object/training/label_2
+  calibs_path: dataset/kitti/object/training/calib
   planes_path: Ezgi/planes
   num_points: 20000
   voxel_size: 0.05
