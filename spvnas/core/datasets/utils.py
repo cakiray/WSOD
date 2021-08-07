@@ -13,7 +13,7 @@ def read_labels( label_path):
 
     return label
 
-def read_points( lidar_path, idx):
+def read_points( lidar_path):
     file = open(lidar_path, 'rb')
     points = np.fromfile(file, dtype=np.float32).reshape(-1, 4)[:,0:3]  # .astype(np.float16)
     return points

@@ -16,7 +16,7 @@ import cv2
 import open3d
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
-import utils
+from .utils import *
 
 __all__ = ['KITTI']
 
@@ -166,9 +166,9 @@ class KITTIInternal:
     def generate_CRM(self, radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
         vehicles = [ b'Car']
 
-        labels = utils.read_labels( labels_path )
-        points = utils.read_points( points_path )
-        calibs = utils.read_calibs( calibs_path)
+        labels = read_labels( labels_path )
+        points = read_points( points_path )
+        calibs = read_calibs( calibs_path)
 
         points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
         map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
@@ -176,7 +176,7 @@ class KITTIInternal:
             if label['type'] in vehicles:
                 # x -> l, y -> w, z -> h
                 # Convert camera(image) coordinates to laser point cloud coordinates in meters
-                center = utils.project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
+                center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
                 center = np.dot(center, rot_mat) * scale_factor
 
                 # Center point
@@ -185,17 +185,17 @@ class KITTIInternal:
                 z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
                 center = [x,y,z]
 
-                crm =  utils.get_distance(points, center, _in3d = False)
-                crm =  utils.standardize(crm, threshold=radius)
-                crm = utils.substact_1(crm)
+                crm =  get_distance(points, center, _in3d = False)
+                crm =  standardize(crm, threshold=radius)
+                crm = substact_1(crm)
 
                 map += crm
 
         return map
 
     def align_pcd(self, pc_file, plane_file):
-        def vector_angle(u, v):
-            return np.arccos(np.dot(u,v) / (np.linalg.norm(u)* np.linalg.norm(v)))
+        #def vector_angle(u, v):
+        #    return np.arccos(np.dot(u,v) / (np.linalg.norm(u)* np.linalg.norm(v)))
 
         pc_file = open ( pc_file, 'rb')
         points = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
@@ -203,6 +203,7 @@ class KITTIInternal:
         #get plane model from txt
         plane_model =  open(plane_file, 'r').readlines()[3].rstrip()
         a,b,c,d = map(float, plane_model.split(' '))
+        plane_model = [a,b,c,d]
 
         pcd=open3d.open3d.geometry.PointCloud()
         pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
@@ -314,8 +315,5 @@ class KITTIInternal:
     def collate_fn(inputs):
         return sparse_collate_fn(inputs)
 
-
-
-
-
-def align
+def vector_angle(u, v):
+    return np.arccos(np.dot(u,v) / (np.linalg.norm(u)* np.linalg.norm(v)))
