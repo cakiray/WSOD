@@ -280,6 +280,7 @@ class KITTIInternal:
             'labels': self.labels[index],
             'rot_mat': rot_mat,
             'scale_factor': scale_factor,
+            'subsize': len(inds),
             'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
         }
 
