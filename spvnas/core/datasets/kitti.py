@@ -206,7 +206,7 @@ class KITTIInternal:
 
         block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
         calibs = read_calibs( self.calibs[index])
-        labels = read_labels(self.labels[index])
+        instance_labels = read_labels(self.labels[index])
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
 
         # Data augmentation
@@ -225,7 +225,7 @@ class KITTIInternal:
 
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
-        crm_target_ = generate_CRM(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
+        crm_target_ = generate_CRM_wfiles(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
                                    rot_mat = rot_mat, scale_factor =scale_factor)
 
         if True:# 'train' in self.split:
@@ -277,7 +277,7 @@ class KITTIInternal:
             'targets_mapped': crm_target_,
             'inverse_map': inverse_map,
             'calibs': calibs,
-            'labels': labels,
+            'labels': instance_labels,
             'rot_mat': rot_mat,
             'scale_factor': scale_factor,
             'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
