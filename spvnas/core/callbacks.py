@@ -33,11 +33,11 @@ class Shrinkage(Callback):
         outputs = output_dict[self.output_tensor]
         targets = output_dict[self.target_tensor]
 
-        l = (outputs - targets)
+        l = torch.abs(outputs - targets)
         l2 = l ** 2
         deniminator = 1 + torch.exp(self.a* (self.c-l))
-        error = l2/deniminator
-
+        error = torch.mean(l2/deniminator)
+        #print(error.size(), error.item())
         self.size += targets.size(0)
         self.errors += error.item() * targets.size(0)
         #self.errors += error.item()
@@ -95,7 +95,7 @@ class MTE(Callback):
         outputs = output_dict[self.output_tensor]
         targets = output_dict[self.target_tensor]
 
-        error = torch.mean((outputs - targets) ** 4)
+        error = torch.mean(torch.abs(outputs - targets) ** 4)
         self.size += targets.size(0)
         self.errors += error.item() * targets.size(0)
 
