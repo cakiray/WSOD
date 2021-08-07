@@ -117,13 +117,15 @@ class SemanticKITTITrainer(Trainer):
             rot_matrix = rot_mat[i]
             scale_fac = scale_factor[i]
             subsize = subsizes[i]
-            print(label,  feed_dict['targets'].F.shape)
+            print(label,  feed_dict['targets'].F.shape, subsize)
             radius = int ((self.num_epochs-self.epoch_num) / 2)
             if radius<2:
                 radius=2
             crm_target = generate_CRM_wfiles(radius, labels_path=label, points_path=pc_file,
                                              calibs_path=calib, rot_mat=rot_matrix, scale_factor=scale_fac)
-            feed_dict['targets'].F[start:subsize+start, :] = crm_target
+            #device = torch.device("cuda:0")
+            print("crm", crm_target.shape)
+            feed_dict['targets'].F[start:subsize+start, :] = torch.from_numpy(crm_target).to(feed_dict['targets'].F)
             start = subsize
 
 
