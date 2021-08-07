@@ -4,7 +4,7 @@ import os.path
 import random
 import sys
 from collections import Sequence
-
+import math
 import h5py
 import numpy as np
 import scipy
@@ -163,13 +163,80 @@ class KITTIInternal:
     def set_angle(self, angle):
         self.angle = angle
 
+    def generate_CRM(self, radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
+        vehicles = [ b'Car']
+
+        labels = utils.read_labels( labels_path )
+        points = utils.read_points( points_path )
+        calibs = utils.read_calibs( calibs_path)
+
+        points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
+        map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
+        for label in labels:
+            if label['type'] in vehicles:
+                # x -> l, y -> w, z -> h
+                # Convert camera(image) coordinates to laser point cloud coordinates in meters
+                center = utils.project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
+                center = np.dot(center, rot_mat) * scale_factor
+
+                # Center point
+                x = center[0][0]
+                y = center[0][1]
+                z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
+                center = [x,y,z]
+
+                crm =  utils.get_distance(points, center, _in3d = False)
+                crm =  utils.standardize(crm, threshold=radius)
+                crm = utils.substact_1(crm)
+
+                map += crm
+
+        return map
+
+    def align_pcd(self, pc_file, plane_file):
+        def vector_angle(u, v):
+            return np.arccos(np.dot(u,v) / (np.linalg.norm(u)* np.linalg.norm(v)))
+
+        pc_file = open ( pc_file, 'rb')
+        points = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
+
+        #get plane model from txt
+        plane_model =  open(plane_file, 'r').readlines()[3].rstrip()
+        a,b,c,d = map(float, plane_model.split(' '))
+
+        pcd=open3d.open3d.geometry.PointCloud()
+        pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
+        # Translate plane to coordinate center
+        #pcd.translate((0,-d/c,0))
+
+        # Calculate rotation angle between plane normal & z-axis
+        plane_normal = tuple(plane_model[:3])
+        z_axis = (0,0,1)
+        rotation_angle = vector_angle(plane_normal, z_axis)
+
+        # Calculate rotation axis
+        plane_normal_length = math.sqrt(a**2 + b**2 + c**2)
+        u1 = b / plane_normal_length
+        u2 = -a / plane_normal_length
+        rotation_axis = (u1, u2, 0)
+
+        # Generate axis-angle representation
+        optimization_factor = 1#1.4
+        axis_angle = tuple([x * rotation_angle * optimization_factor for x in rotation_axis])
+
+        # Rotate point cloud
+        R = pcd.get_rotation_matrix_from_axis_angle(axis_angle)
+        pcd.rotate(R, center=(0,0,0))
+
+        points[:, :3] = np.asarray(pcd.points)
+        return points
+
     def __len__(self):
         return len(self.pcs)
 
     def __getitem__(self, index):
-        
-        pc_file = open ( self.pcs[index], 'rb')
-        block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
+
+        block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
 
         # Data augmentation
@@ -188,7 +255,7 @@ class KITTIInternal:
 
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
-        crm_target_ = generate_CRM(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
+        crm_target_ = self.generate_CRM(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
                                    rot_mat = rot_mat, scale_factor =scale_factor)
 
         if True:# 'train' in self.split:
@@ -210,25 +277,6 @@ class KITTIInternal:
             ground_feature[inliers] = 0.0
             
             block_ = np.concatenate( (block_, ground_feature), axis=1)
-        #Data augmentation?
-        if 'train' in self.split:
-            theta = np.random.uniform(0, 2 * np.pi)
-            scale_factor = np.random.uniform(0.95, 1.05)
-            rot_mat = np.array([[np.cos(theta),
-                                 np.sin(theta), 0],
-                                [-np.sin(theta),
-                                 np.cos(theta), 0], [0, 0, 1]])
-
-            block[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
-            #block[:, 3:] = block_[:, 3:] + np.random.randn(3) * 0.1
-        else:
-            theta = self.angle
-            transform_mat = np.array([[np.cos(theta),
-                                       np.sin(theta), 0],
-                                      [-np.sin(theta),
-                                       np.cos(theta), 0], [0, 0, 1]])
-            block[...] = block_[...]
-            block[:, :3] = np.dot(block[:, :3], transform_mat)
         """
         pc_ = np.round(block_[:, :3] / self.voxel_size)
         pc_ -= pc_.min(0, keepdims=1)
@@ -267,32 +315,7 @@ class KITTIInternal:
         return sparse_collate_fn(inputs)
 
 
-def generate_CRM( radius, labels_path, points_path, calibs_path, rot_mat, scale_factor ):
-    vehicles = [ b'Car']
 
-    labels = utils.read_labels( labels_path )
-    points = utils.read_points( points_path )
-    calibs = utils.read_calibs( calibs_path)
 
-    points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
-    map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
-    for label in labels:
-        if label['type'] in vehicles:
-            # x -> l, y -> w, z -> h
-            # Convert camera(image) coordinates to laser point cloud coordinates in meters
-            center = utils.project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
-            center = np.dot(center, rot_mat) * scale_factor
 
-            # Center point
-            x = center[0][0]
-            y = center[0][1]
-            z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
-            center = [x,y,z]
-
-            crm =  utils.get_distance(points, center, _in3d = False)
-            crm =  utils.standardize(crm, threshold=radius)
-            crm = utils.substact_1(crm)
-
-            map += crm
-
-    return map
+def align

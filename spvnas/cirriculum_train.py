@@ -114,10 +114,10 @@ def main() -> None:
             num_epochs= epoch_interval,# configs.num_epochs,
             callbacks=[InferenceRunner(
                 dataflow[split],
-                callbacks=[MTE(name=f'mte/{split}')])
+                callbacks=[Shrinkage(name=f'shrinkage/{split}')])
                           for split in ['test']
                       ] + [
-                          MinSaver(scalar='mte/test',name=dt_string, save_dir=configs.best_model ),
+                          MinSaver(scalar='shrinkage/test',name=dt_string, save_dir=configs.best_model ),
                           Saver(save_dir=configs.checkpoints),
                           TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
                       ])
