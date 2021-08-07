@@ -103,6 +103,7 @@ class SemanticKITTITrainer(Trainer):
             if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
         #inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
+        points = _inputs['lidar'].F
         calibs = feed_dict['calibs']
         labels = feed_dict['labels']
         rot_mat = feed_dict['rot_mat']
@@ -111,7 +112,7 @@ class SemanticKITTITrainer(Trainer):
         pc_files = feed_dict['pc_file']
         start = 0
         for i in range(len(calibs)):
-            pc_file = pc_files[i]
+            point = points[start:subsize+start, :]
             calib = calibs[i]
             label = labels[i]
             rot_matrix = rot_mat[i]
@@ -121,7 +122,7 @@ class SemanticKITTITrainer(Trainer):
             radius = int ((self.num_epochs-self.epoch_num) / 2)
             if radius<2:
                 radius=2
-            crm_target = generate_CRM_wfiles(radius, labels_path=label, points_path=pc_file,
+            crm_target = generate_CRM_wfiles(radius, points = point, labels_path=label,
                                              calibs_path=calib, rot_mat=rot_matrix, scale_factor=scale_fac)
             #device = torch.device("cuda:0")
             print("crm", crm_target.shape)

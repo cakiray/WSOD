@@ -225,7 +225,7 @@ class KITTIInternal:
 
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
-        crm_target_ = generate_CRM_wfiles(radius=self.radius, labels_path=self.labels[index], points_path=self.pcs[index], calibs_path=self.calibs[index],
+        crm_target_ = generate_CRM_wfiles(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index],
                                    rot_mat = rot_mat, scale_factor =scale_factor)
 
         if True:# 'train' in self.split:
