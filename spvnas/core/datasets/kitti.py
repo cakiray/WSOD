@@ -205,8 +205,9 @@ class KITTIInternal:
     def __getitem__(self, index):
 
         block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
-        calibs = read_calibs( self.calibs[index])
-        instance_labels = read_labels(self.labels[index])
+        #pc_file = open ( self.pcs[index], 'rb')
+        #block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
+
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
 
         # Data augmentation
@@ -225,9 +226,9 @@ class KITTIInternal:
 
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
-        crm_target_ = generate_CRM_wfiles(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index],
-                                   rot_mat = rot_mat, scale_factor =scale_factor)
-
+        crm_target_ = generate_CRM_wfiles(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index], rot_mat = rot_mat, scale_factor =scale_factor)
+        print(rot_mat, scale_factor)
+        print()
         if True:# 'train' in self.split:
             # get the points only at front view
             # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
@@ -266,6 +267,12 @@ class KITTIInternal:
         pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
         feat = feat_[inds]
         crm_target = crm_target_[inds]
+    
+        a = self.pcs[index].split('/')[-1][:-4]
+        print("\n\nAAAAAA: ", self.radius, a, crm_target.shape, pc.shape, np.all(crm_target==0))
+        np.save(f'/data/Ezgi/{a}.npy', np.asarray(crm_target))
+        np.save(f'/data/Ezgi/input_{a}.npy', np.asarray(feat))
+        
         lidar = SparseTensor(feat, pc) #unique
         crm_target = SparseTensor(crm_target, pc) #unique
         crm_target_ = SparseTensor(crm_target_, pc_) #voxelized original
