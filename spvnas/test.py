@@ -135,7 +135,7 @@ def main() -> None:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
-                if not 'name' in key:
+                if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
                     _inputs[key] = value.cuda()
 
             inputs = _inputs['lidar']
@@ -233,7 +233,7 @@ def main() -> None:
                 bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
                 if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
                     fp_bbox += 1
-                    print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                    #print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,4)
@@ -257,7 +257,7 @@ def main() -> None:
                             # if at least 1 channel of PRM has iou more that 50%, it would be true positive
                             iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
                             # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                            if iou_bbox[1] > 0.5:
+                            if iou_bbox[1] > 0.1:
                                 bbox_found_indicator[bbox_idx] = 1
                                 print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
                             else:
