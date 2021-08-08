@@ -211,8 +211,8 @@ class KITTIInternal:
 
         # Data augmentation
         scale_factor = 1.0
-        rot_mat = np.array([[1,1, 0],
-                            [1,1, 0],
+        rot_mat = np.array([[1,0, 0],
+                            [0,1, 0],
                             [0, 0, 1]])
 
         if 'train' in self.split:
