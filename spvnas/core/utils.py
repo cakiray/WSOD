@@ -189,7 +189,7 @@ def find_bbox(point, labels, calibs):
 
     return None, -1
 
-def bbox_recall(labels, idx_list):
+def bbox_recall(labels, idx_list): # RECALL = TP / TP + FN
     tp = 0
     fn = 0
     dontcare_noncar = 0
@@ -211,7 +211,7 @@ def bbox_recall(labels, idx_list):
         return -2
     return tp/(tp+fn)
 
-def bbox_precision(labels, idx_list, fp):
+def bbox_precision(labels, idx_list, fp): #PRECISION = TP / TP + FP
     tp = 0
     dontcare_noncar = 0
     num_bbox = len(labels)

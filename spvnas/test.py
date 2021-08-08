@@ -131,7 +131,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if True:#n < 20:
+        if n < 30:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -233,6 +233,7 @@ def main() -> None:
                 bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
                 if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
                     fp_bbox += 1
+                    print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,4)
@@ -258,7 +259,10 @@ def main() -> None:
                             # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
                             if iou_bbox[1] > 0.5:
                                 bbox_found_indicator[bbox_idx] = 1
-                            
+                                print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                            else:
+                                print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+
                     if not np.isnan(np.sum(prec)):
                         mprecision += prec
                         prec_count += 1
