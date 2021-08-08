@@ -196,18 +196,21 @@ class KITTIInternal:
         R = pcd.get_rotation_matrix_from_axis_angle(axis_angle)
         pcd.rotate(R, center=(0,0,0))
 
-        points[:, :3] = np.asarray(pcd.points)
-        return points
+        #points[:, :3] = np.asarray(pcd.points)
+        #return points
 
+        #return 3rd row which is z, which is height
+        return np.asscalar(pcd.points)[:,2]
     def __len__(self):
         return len(self.pcs)
 
     def __getitem__(self, index):
 
-        block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
-        #pc_file = open ( self.pcs[index], 'rb')
-        #block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
-
+        #block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
+        height = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
+        pc_file = open ( self.pcs[index], 'rb')
+        block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
+        block_ = np.concatenate( (block_, height), axis=1)
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
 
         # Data augmentation
