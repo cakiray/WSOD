@@ -12,10 +12,8 @@ def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scal
             # x -> l, y -> w, z -> h
             # Convert camera(image) coordinates to laser point cloud coordinates in meters
             center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
-            print("center orig & rot", center, rot_mat, scale_factor)
             
             center = np.dot(center, rot_mat) * scale_factor
-            print("center new", center)
             # Center point
             x = center[0][0]
             y = center[0][1]

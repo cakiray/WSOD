@@ -69,7 +69,7 @@ def main() -> None:
 
 
     if 'spvnas' in configs.model.name:
-        model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs)
+        model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=5)
     elif 'spvcnn' in configs.model.name:
         model = myspvcnn(configs=configs, weights=args.weights)
     elif 'mink' in configs.model.name:

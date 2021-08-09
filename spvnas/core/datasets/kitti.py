@@ -200,7 +200,7 @@ class KITTIInternal:
         #return points
 
         #return 3rd row which is z, which is height
-        return np.asscalar(pcd.points)[:,2]
+        return np.asarray(pcd.points)[:,2]
     def __len__(self):
         return len(self.pcs)
 
@@ -209,10 +209,15 @@ class KITTIInternal:
         #block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
         height = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
         pc_file = open ( self.pcs[index], 'rb')
+        
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
-        block_ = np.concatenate( (block_, height), axis=1)
+        front_idxs = block_[:,0]>=0
+        block_ = block_[front_idxs]
+        height = height[front_idxs]     
+        
+        block_ = np.concatenate( (block_, height.reshape(-1,1)), axis=1)
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
-
+    
         # Data augmentation
         scale_factor = 1.0
         rot_mat = np.array([[1,0, 0],
@@ -230,9 +235,8 @@ class KITTIInternal:
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
         crm_target_ = generate_CRM_wfiles(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index], rot_mat = rot_mat, scale_factor =scale_factor)
-        print(rot_mat, scale_factor)
-        print()
-        if True:# 'train' in self.split:
+        
+        if False:# 'train' in self.split:
             # get the points only at front view
             # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
             front_idxs = block_[:,0]>=0
@@ -272,9 +276,9 @@ class KITTIInternal:
         crm_target = crm_target_[inds]
     
         a = self.pcs[index].split('/')[-1][:-4]
-        print("\n\nAAAAAA: ", self.radius, a, crm_target.shape, pc.shape, np.all(crm_target==0))
-        np.save(f'/data/Ezgi/{a}.npy', np.asarray(crm_target))
-        np.save(f'/data/Ezgi/input_{a}.npy', np.asarray(feat))
+        #print("\n\nAAAAAA: ", self.radius, a, crm_target.shape, pc.shape, np.all(crm_target==0))
+        #np.save(f'/data/Ezgi/{a}.npy', np.asarray(crm_target))
+        #np.save(f'/data/Ezgi/input_{a}.npy', np.asarray(feat))
         
         lidar = SparseTensor(feat, pc) #unique
         crm_target = SparseTensor(crm_target, pc) #unique

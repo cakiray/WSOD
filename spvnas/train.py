@@ -75,7 +75,7 @@ def main() -> None:
 
     #model = builder.make_model()
     if 'spvnas' in args.name.lower():
-        model = spvnas_specialized(args.name, pretrained=False)
+        model = spvnas_specialized(args.name, input_channels = configs.data.input_channels , pretrained=False)
     elif 'spvcnn' in args.name.lower():
         model = spvcnn_specialized(args.name, weights=args.weights, pretrained=False)
     else:
