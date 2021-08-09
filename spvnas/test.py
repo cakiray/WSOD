@@ -114,11 +114,11 @@ def main() -> None:
     model.eval()
     
     t1_start = perf_counter()
-
-    miou = np.zeros(shape=(4,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
+    channel_num = configs.data.input_channels
+    miou = np.zeros(shape=(channel_num,2)) #miou is calculated by binary class (being pos, being nonpos values on PRM)
     miou_crm = np.zeros(shape=(1,2)) #miou of crm is calculated by binary class (being pos, being nonpos values on PRM)
-    mprecision = np.zeros(shape=(4,2))
-    mrecall = np.zeros(shape=(4,2))
+    mprecision = np.zeros(shape=(channel_num,2))
+    mrecall = np.zeros(shape=(channel_num,2))
     mprecision_crm = np.zeros(shape=(1,2))
     mrecall_crm = np.zeros(shape=(1,2))
     mbbox_recall,mbbox_precision =0.0, 0.0
@@ -193,7 +193,7 @@ def main() -> None:
             # Calculate the mIoU of the sum of peak_responses
             if len(peak_list)>0:
                 if peak_response_maps_sum.shape[1]>1:
-                    ious = np.zeros(shape=(4,2))
+                    ious = np.zeros(shape=(channel_num,2))
                     for col in range(peak_response_maps_sum.shape[1]):
                         prm_c = np.asarray(peak_response_maps_sum[:,col])
                         mask_pred = utils.generate_prm_mask(prm_c)
@@ -206,9 +206,9 @@ def main() -> None:
 
             # If there is no peak detected
             if len(peak_list) == 0:
-                # If each channel of peaks are returned, shape=(N,4)
+                # If each channel of peaks are returned, shape=(N,channel_num)
                 if len(miou.shape)==2:
-                    ious = np.zeros(shape=(4,2))
+                    ious = np.zeros(shape=(channel_num,2))
                     for col in range(miou.shape[0]):
                         mask_pred = np.zeros_like(mask_gt_prm)
                         iou_col = utils.iou(mask_pred, mask_gt_prm, n_classes=2)
@@ -236,10 +236,10 @@ def main() -> None:
                     #print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
-                # If each channel of peaks are returned, shape=(N,4)
+                # If each channel of peaks are returned, shape=(N,channel_num)
                 if prm.shape[1] >1:
-                    prec = np.zeros(shape=(4,2))
-                    recall = np.zeros(shape=(4,2))
+                    prec = np.zeros(shape=(channel_num,2))
+                    recall = np.zeros(shape=(channel_num,2))
 
                     for col in range(prm.shape[1]):
                         mask_pred = utils.generate_prm_mask(prm[:,col])
