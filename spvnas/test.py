@@ -109,7 +109,7 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    model.module._patch()
+    #model.module._patch()
     # important
     model.eval()
     
@@ -131,6 +131,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
+        model.module._recover()
         if n < 30:
             n += 1
             _inputs = dict()
@@ -145,8 +146,8 @@ def main() -> None:
             inputs.F.requires_grad = True
         
             outputs = model(inputs) # voxelized output (N,1)
-            loss = criterion(outputs, targets) 
-
+            loss = criterion(outputs, targets)
+            model.module._patch()
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
