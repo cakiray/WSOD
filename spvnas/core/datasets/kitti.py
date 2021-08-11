@@ -110,10 +110,7 @@ class KITTIInternal:
                  sample_stride=1,
                  submit=False,
                  google_mode=True):
-        if submit:
-            trainval = True
-        else:
-            trainval = False
+
         self.radius = radius
         self.root = root
         self.data_path = data_path
@@ -165,13 +162,7 @@ class KITTIInternal:
 
     def align_pcd(self, pc, plane_file):
         points = pc
-        """pcd=open3d.open3d.geometry.PointCloud()
-        pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
-        plane_model, inliers = pcd.segment_plane(distance_threshold=0.2,
-                                         ransac_n=3,
-                                         num_iterations=1000)
-        a,b,c,d = plane_model
-        """
+
         #get plane model from txt
         plane_model =  open(plane_file, 'r').readlines()[0].rstrip()
         a,b,c,d = map(float, plane_model.split(' '))
@@ -181,7 +172,7 @@ class KITTIInternal:
         pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
 
         # Translate plane to coordinate center
-        #pcd.translate((0,-d/c,0))
+        pcd.translate((0,-d/c,0))
 
         # Calculate rotation angle between plane normal & z-axis
         plane_normal = tuple(plane_model[:3])
@@ -193,17 +184,19 @@ class KITTIInternal:
         u1 = b / plane_normal_length
         u2 = -a / plane_normal_length
         rotation_axis = (u1, u2, 0)
-
+        """
         # Generate axis-angle representation
         optimization_factor = 1#1.4
         axis_angle = tuple([x * rotation_angle * optimization_factor for x in rotation_axis])
-
         # Rotate point cloud
         R = pcd.get_rotation_matrix_from_axis_angle(axis_angle)
+        """
+        from pyquaternion import Quaternion
+        q8c = Quaternion(axis=rotation_axis, angle=rotation_angle)
+        R = q8c.rotation_matrix
         pcd.rotate(R, center=(0,0,0))
         
         #return 3rd row which is z, which is height
-        #print(np.min(np.asarray(pcd.points)[:,2]), np.max(np.asarray(pcd.points)[:,2]), np.min(points), np.max(points))
         return np.asarray(pcd.points)[:,2]
     
     
@@ -211,9 +204,6 @@ class KITTIInternal:
         return len(self.pcs)
 
     def __getitem__(self, index):
-    
-        #block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
-        
         pc_file = open ( self.pcs[index], 'rb')        
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
         front_idxs = block_[:,0]>=0
