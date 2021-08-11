@@ -111,14 +111,15 @@ class SemanticKITTITrainer(Trainer):
         subsizes = feed_dict['subsize']
         pc_files = feed_dict['pc_file']
         start = 0
+        end = points.shape[0]
         for i in range(len(calibs)):
             calib = calibs[i]
             label = labels[i]
             rot_matrix = rot_mat[i]
             scale_fac = scale_factor[i]
             subsize = subsizes[i]
-            point = np.asarray(points[start:subsize+start, :])
-
+            
+            point = np.asarray(points[start:subsize+start, :]).astype(np.float32)
             radius = int ((self.num_epochs-self.epoch_num) / 5)
             if radius<2:
                 radius=2
@@ -126,6 +127,4 @@ class SemanticKITTITrainer(Trainer):
                                              calibs_path=calib, rot_mat=rot_matrix, scale_factor=scale_fac)
             
             feed_dict['targets'].F[start:subsize+start, :] = torch.from_numpy(crm_target).to(feed_dict['targets'].F)
-            start = subsize
-
-
+            start += subsize

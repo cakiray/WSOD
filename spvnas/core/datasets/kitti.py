@@ -163,17 +163,23 @@ class KITTIInternal:
     def set_angle(self, angle):
         self.angle = angle
 
-    def align_pcd(self, pc_file, plane_file):
-        pc_file = open ( pc_file, 'rb')
-        points = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
-
+    def align_pcd(self, pc, plane_file):
+        points = pc
+        """pcd=open3d.open3d.geometry.PointCloud()
+        pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
+        plane_model, inliers = pcd.segment_plane(distance_threshold=0.2,
+                                         ransac_n=3,
+                                         num_iterations=1000)
+        a,b,c,d = plane_model
+        """
         #get plane model from txt
-        plane_model =  open(plane_file, 'r').readlines()[3].rstrip()
+        plane_model =  open(plane_file, 'r').readlines()[0].rstrip()
         a,b,c,d = map(float, plane_model.split(' '))
         plane_model = [a,b,c,d]
 
         pcd=open3d.open3d.geometry.PointCloud()
         pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
+
         # Translate plane to coordinate center
         #pcd.translate((0,-d/c,0))
 
@@ -195,27 +201,28 @@ class KITTIInternal:
         # Rotate point cloud
         R = pcd.get_rotation_matrix_from_axis_angle(axis_angle)
         pcd.rotate(R, center=(0,0,0))
-
-        #points[:, :3] = np.asarray(pcd.points)
-        #return points
-
+        
         #return 3rd row which is z, which is height
+        #print(np.min(np.asarray(pcd.points)[:,2]), np.max(np.asarray(pcd.points)[:,2]), np.min(points), np.max(points))
         return np.asarray(pcd.points)[:,2]
+    
+    
     def __len__(self):
         return len(self.pcs)
 
     def __getitem__(self, index):
-
+    
         #block_ = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
-        height = self.align_pcd(pc_file= self.pcs[index], plane_file=self.planes[index])
-        pc_file = open ( self.pcs[index], 'rb')
         
+        pc_file = open ( self.pcs[index], 'rb')        
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
         front_idxs = block_[:,0]>=0
         block_ = block_[front_idxs]
-        height = height[front_idxs]     
-        
-        block_ = np.concatenate( (block_, height.reshape(-1,1)), axis=1)
+
+        if self.input_channels == 5:
+             height = self.align_pcd(pc=block_, plane_file=self.planes[index])
+             block_ = np.concatenate( (block_, height.reshape(-1,1)), axis=1)
+             
         #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
     
         # Data augmentation
@@ -236,26 +243,6 @@ class KITTIInternal:
 
         crm_target_ = generate_CRM_wfiles(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index], rot_mat = rot_mat, scale_factor =scale_factor)
         
-        if False:# 'train' in self.split:
-            # get the points only at front view
-            # (x,y,z,r) -> (forward, left, up, r) since it's in Velodyne coords.
-            front_idxs = block_[:,0]>=0
-            block_ = block_[front_idxs] 
-            crm_target_ = crm_target_[front_idxs]
-                
-        """ 
-        if self.input_channels == 5:
-            pcd=open3d.open3d.geometry.PointCloud()
-            pcd.points= open3d.open3d.utility.Vector3dVector(block_[:, 0:3])
-            #inlers contains the indexes of gorund points
-            plane_model, inliers = pcd.segment_plane(distance_threshold=0.15,
-                                                     ransac_n=100,
-                                                     num_iterations=1000)
-            ground_feature = np.ones(shape=(block_.shape[0],1))
-            ground_feature[inliers] = 0.0
-            
-            block_ = np.concatenate( (block_, ground_feature), axis=1)
-        """
         pc_ = np.round(block_[:, :3] / self.voxel_size)
         pc_ -= pc_.min(0, keepdims=1)
         feat_ = block_
@@ -274,12 +261,7 @@ class KITTIInternal:
         pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
         feat = feat_[inds]
         crm_target = crm_target_[inds]
-    
-        a = self.pcs[index].split('/')[-1][:-4]
-        #print("\n\nAAAAAA: ", self.radius, a, crm_target.shape, pc.shape, np.all(crm_target==0))
-        #np.save(f'/data/Ezgi/{a}.npy', np.asarray(crm_target))
-        #np.save(f'/data/Ezgi/input_{a}.npy', np.asarray(feat))
-        
+         
         lidar = SparseTensor(feat, pc) #unique
         crm_target = SparseTensor(crm_target, pc) #unique
         crm_target_ = SparseTensor(crm_target_, pc_) #voxelized original

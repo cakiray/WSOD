@@ -69,7 +69,7 @@ def main() -> None:
 
 
     if 'spvnas' in configs.model.name:
-        model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=5)
+        model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
     elif 'spvcnn' in configs.model.name:
         model = myspvcnn(configs=configs, weights=args.weights)
     elif 'mink' in configs.model.name:
@@ -163,6 +163,20 @@ def main() -> None:
                                                             peak_threshold=peak_threshold, normalize=True)
 
             #print("peak len", len( peak_list))
+            print(peak_responses[0].shape[1])
+            valid_peak_inds = []
+            for i in range(len(peak_list)):
+                valid = True
+                prm = np.asarray(peak_responses[i])
+                peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
+
+                for i in range(prm.shape[1]):
+                    if prm[peak_ind[2]][i] <  1.0:
+                        valid = False
+
+                if valid:
+                    valid_peak_inds.append(i)
+
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             """ 
@@ -177,8 +191,9 @@ def main() -> None:
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-                
+                            
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
+                np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
             """
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
@@ -224,7 +239,8 @@ def main() -> None:
                 count += len(peak_list)
 
             #Calculate mprecision and mrecall of each peak_response individually
-            for i in range(len(peak_list)):
+            #for i in range(len(peak_list)):
+            for i in valid_peak_inds:
                 prm = np.asarray(peak_responses[i])
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
                 points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
@@ -234,7 +250,7 @@ def main() -> None:
                 bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
                 if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
                     fp_bbox += 1
-                    #print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                    print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
                 #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                 # If each channel of peaks are returned, shape=(N,channel_num)
@@ -258,11 +274,15 @@ def main() -> None:
                             # if at least 1 channel of PRM has iou more that 50%, it would be true positive
                             iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
                             # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                            if iou_bbox[1] > 0.1:
+                            if iou_bbox[1] > 0.5:
                                 bbox_found_indicator[bbox_idx] = 1
-                                print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
-                            else:
-                                print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+
+                if bbox_idx >1  and bbox_found_indicator[bbox_idx] == 1:
+                    print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                elif bbox_idx > 1:
+                    print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                    
+
 
                     if not np.isnan(np.sum(prec)):
                         mprecision += prec
