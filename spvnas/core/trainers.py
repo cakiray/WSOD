@@ -41,7 +41,7 @@ class SemanticKITTITrainer(Trainer):
 
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-        self.model.module._recover()
+
         outputs = self.model(inputs) # voxelized output (N,1)
             
         if outputs.requires_grad:
@@ -97,7 +97,6 @@ class SemanticKITTITrainer(Trainer):
         # Before step, generetate new CRM with required radius.
         # Then update feed_dict
         from core.datasets.utils import generate_CRM_wfiles
-
         _inputs = dict()
         for key, value in feed_dict.items():
             if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
@@ -109,9 +108,7 @@ class SemanticKITTITrainer(Trainer):
         rot_mat = feed_dict['rot_mat']
         scale_factor = feed_dict['scale_factor']
         subsizes = feed_dict['subsize']
-        pc_files = feed_dict['pc_file']
         start = 0
-        end = points.shape[0]
         for i in range(len(calibs)):
             calib = calibs[i]
             label = labels[i]
