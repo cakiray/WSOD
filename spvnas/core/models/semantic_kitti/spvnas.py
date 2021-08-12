@@ -178,9 +178,13 @@ class SPVNAS(RandomNet):
         self.dropout = nn.Dropout(0.3, True)
         self.weight_initialization()
         
-        
-    
     def change_last_layer(self, num_classes):
+        # change last classifier layer's output channel and make it trainable, by default
+        self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
+        self.classifier.set_output_channel(num_classes)
+        return self
+    
+    def updatelayers_with_freeze(self, num_classes):
         """trainable_layers = ['point_transforms.2', 'upsample.2', 'upsample.3']
         # Freeze model weights except point_transforms' third layers block
         for name, param in self.named_parameters():

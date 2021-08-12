@@ -222,8 +222,13 @@ class SPVCNN(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-                
     def change_last_layer(self, num_classes):
+        # change last classifier layer's output channel and make it trainable, by default
+        self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
+        self.classifier.set_output_channel(num_classes)
+        return self
+                
+    def freezelayers(self, num_classes):
         # Freeze model weights
         for param in self.parameters():
             param.requires_grad = False
