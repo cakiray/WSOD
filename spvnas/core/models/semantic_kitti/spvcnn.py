@@ -86,7 +86,8 @@ class SPVCNN(nn.Module):
         super().__init__()
 
         cr = kwargs.get('cr', 1.0)
-        cs = [32, 32, 64, 128, 256, 256, 128, 96, 96]
+        #cs = [32, 32, 64, 128, 256, 256, 128, 96, 96]
+        cs = [32, 64, 128, 128, 128, 64, 64, 32, 16]
         cs = [int(cr * x) for x in cs]
         self.cs = cs
         if 'pres' in kwargs and 'vres' in kwargs:
@@ -223,6 +224,10 @@ class SPVCNN(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def change_last_layer(self, num_classes):
+        for name, param in self.named_parameters():
+            param.requires_grad = True
+        for name, module in self.named_modules():
+            module.requires_grad_(True)
         # change last classifier layer's output channel and make it trainable, by default
         self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
         self.classifier.set_output_channel(num_classes)
