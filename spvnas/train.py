@@ -86,14 +86,14 @@ def main() -> None:
     else:
         raise NotImplementedError
 
-    model.train()
+    model.train() 
     model = model.change_last_layer(configs.data.num_classes)
-    model.module._recover()
+    print("\nmodel: " ,model )
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
         device_ids=[dist.local_rank()],
         find_unused_parameters=True)
-
+    
     criterion = builder.make_criterion()
     optimizer = builder.make_optimizer(model)
     scheduler = builder.make_scheduler(optimizer)
@@ -114,10 +114,10 @@ def main() -> None:
         num_epochs=configs.num_epochs,
         callbacks=[InferenceRunner(
             dataflow[split],
-            callbacks=[Shrinkage(name=f'shrinkage/{split}')])
+            callbacks=[MSE(name=f'mse/{split}')])
                       for split in ['test']
                   ] + [
-                      MinSaver(scalar='shrinkage/test',name=dt_string, save_dir=configs.best_model ),
+                      MinSaver(scalar='mse/test',name=dt_string, save_dir=configs.best_model ),
                       Saver(save_dir=configs.checkpoints),
                       TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
                   ])
@@ -143,7 +143,7 @@ def main() -> None:
     n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow['test'], desc='eval'):
         model.module._recover()
-        if True:#n < 30:
+        if n < 10:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():

@@ -231,7 +231,7 @@ def main() -> None:
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
 
                 valid_peak = True
-                for c in prm.shape[1]:
+                for c in range(prm.shape[1]):
                     if prm[peak_ind[2]][c] < 1.0:
                         valid_peak = False
                 # If peak is not a valid peak, meaning has values lower than 1.0 at
@@ -271,7 +271,7 @@ def main() -> None:
                                 # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
                                 if iou_bbox[1] > 0.5:
                                     bbox_found_indicator[bbox_idx] = 1
-
+                                print("iou prec: ", iou_bbox[1])
                     if bbox_idx >1  and bbox_found_indicator[bbox_idx] == 1:
                         print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
                     elif bbox_idx > 1:
