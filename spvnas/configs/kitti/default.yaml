@@ -1,5 +1,5 @@
 data:
-  input_channels: 4
+  input_channels: 5
   num_classes: 1
   ignore_label: 255
   training_size: 3712
@@ -15,15 +15,15 @@ dataset:
   crm_path: Ezgi/center_response_map_r2_gs
   labels_path: dataset/kitti/object/training/label_2
   calibs_path: dataset/kitti/object/training/calib
-  planes_path: Ezgi/planes
+  planes_path: Ezgi/plane_models
   num_points: 20000
   voxel_size: 0.05
   quantization_size: 3
   
-num_epochs: 20
+num_epochs: 5
 prm:
   win_size: 5
-  peak_threshold: 0.15
+  peak_threshold: 0.25
 
 batch_size: 8
 batch_norm: true

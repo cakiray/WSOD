@@ -143,7 +143,7 @@ def main() -> None:
     n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow['test'], desc='eval'):
         model.module._recover()
-        if n < 10:
+        if n < 2:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
