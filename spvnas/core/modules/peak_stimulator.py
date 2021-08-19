@@ -53,7 +53,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     # PRM paper to calculate gradient
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
-    print("max and min values in PRM: ", torch.max(outputs), torch.min(outputs))
+    print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
     
     valid_peak_list = []
     peak_response_maps = []
@@ -66,7 +66,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             grad_output.zero_()
             # Set 1 to the max of predicted center points in gradient
             grad_output[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]] = 1
-
+            #grad_output = torch.ones_like(outputs)
+            
             if inputs.F.grad is not None:
                 inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
 
@@ -76,6 +77,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             grad = inputs.F.grad # N x input_channel_num
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
+            print("prm nonzero ", (prm!=0.0).sum(0))
             prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
 
             #normalize gradient 0 <= prm <= 1
@@ -83,6 +85,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 mins= np.amin(np.array(prm[prm>0.0]), axis=0)
                 maxs = np.amax(np.array(prm), axis=0)
                 prm = (prm-mins)/(maxs-mins)
+                print("min max ", mins, maxs)
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
 

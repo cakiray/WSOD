@@ -129,6 +129,7 @@ def main() -> None:
     trainer.before_epoch()
 
     # important
+    model.module._patch()
     model.eval()
 
     t1_start = perf_counter()
@@ -142,8 +143,8 @@ def main() -> None:
 
     n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow['test'], desc='eval'):
-        model.module._recover()
-        if n < 2:
+        
+        if n < 5:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -166,13 +167,12 @@ def main() -> None:
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
             #print( "backprop calling ", len(peak_list),aggregation)
-            model.module._patch()
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                                                     peak_threshold=peak_threshold, normalize=True)
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            """ 
+            
             print("\ncurrent file: ", filename) 
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
@@ -187,7 +187,7 @@ def main() -> None:
                             
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
-            """
+            
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )

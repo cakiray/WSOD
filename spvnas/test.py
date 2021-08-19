@@ -109,7 +109,7 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
-    #model.module._patch()
+    model.module._patch()
     # important
     model.eval()
     
@@ -131,8 +131,8 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        model.module._recover()
-        if n < 30:
+        #model.module._recover()
+        if n < 5:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -148,7 +148,7 @@ def main() -> None:
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets)
 
-            model.module._patch()
+            #model.module._patch()
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -165,7 +165,7 @@ def main() -> None:
 
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-            """ 
+             
             print("\ncurrent file: ", filename) 
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
@@ -180,7 +180,7 @@ def main() -> None:
                             
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
-            """
+            
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -272,9 +272,9 @@ def main() -> None:
                                 if iou_bbox[1] > 0.5:
                                     bbox_found_indicator[bbox_idx] = 1
                                 print("iou prec: ", iou_bbox[1])
-                    if bbox_idx >1  and bbox_found_indicator[bbox_idx] == 1:
+                    if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
                         print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
-                    elif bbox_idx > 1:
+                    elif bbox_idx >- 1:
                         print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
                         if not np.isnan(np.sum(prec)):

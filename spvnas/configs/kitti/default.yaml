@@ -33,7 +33,7 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /lr0,1-bs8-r2-train-gs-shrinkage
 
-outputs: /data/Ezgi/r2
+outputs: /data/Ezgi/dummy
 
 model:
   name: spvnas
