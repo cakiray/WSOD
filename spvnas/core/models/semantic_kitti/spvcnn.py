@@ -86,8 +86,9 @@ class SPVCNN(nn.Module):
         super().__init__()
 
         cr = kwargs.get('cr', 1.0)
+        input_channels = kwargs.get('input_channels', 4)
         #cs = [32, 32, 64, 128, 256, 256, 128, 96, 96]
-        cs = [32, 64, 128, 128, 128, 64, 64, 32, 16]
+        cs = [32, 64, 128, 64, 32]
         cs = [int(cr * x) for x in cs]
         self.cs = cs
         if 'pres' in kwargs and 'vres' in kwargs:
@@ -95,7 +96,7 @@ class SPVCNN(nn.Module):
             self.vres = kwargs['vres']
 
         self.stem = nn.Sequential(
-            spnn.Conv3d(4, cs[0], kernel_size=3, stride=1),
+            spnn.Conv3d(input_channels, cs[0], kernel_size=3, stride=1),
             spnn.BatchNorm(cs[0]), spnn.ReLU(True),
             spnn.Conv3d(cs[0], cs[0], kernel_size=3, stride=1),
             spnn.BatchNorm(cs[0]), spnn.ReLU(True))
@@ -111,7 +112,39 @@ class SPVCNN(nn.Module):
             ResidualBlock(cs[1], cs[2], ks=3, stride=1, dilation=1),
             ResidualBlock(cs[2], cs[2], ks=3, stride=1, dilation=1),
         )
+        self.up1 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[2], cs[3], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[3] + cs[1], cs[3], ks=3, stride=1,
+                              dilation=1),
+                ResidualBlock(cs[3], cs[3], ks=3, stride=1, dilation=1),
+            )
+        ])
 
+        self.up2 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[3], cs[4], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[4] + cs[0], cs[4], ks=3, stride=1,
+                              dilation=1),
+                ResidualBlock(cs[4], cs[4], ks=3, stride=1, dilation=1),
+            )
+        ])
+        self.classifier = nn.Sequential(nn.Linear(cs[4],
+                                                  kwargs['num_classes']))
+
+        self.point_transforms = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(cs[1], cs[2]),
+                nn.BatchNorm1d(cs[2]),
+                nn.ReLU(True),
+            ),
+            nn.Sequential(
+                nn.Linear(cs[2], cs[4]),
+                nn.BatchNorm1d(cs[4]),
+                nn.ReLU(True),
+            )
+        ])
+        """
         self.stage3 = nn.Sequential(
             BasicConvolutionBlock(cs[2], cs[2], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[2], cs[3], ks=3, stride=1, dilation=1),
@@ -123,7 +156,7 @@ class SPVCNN(nn.Module):
             ResidualBlock(cs[3], cs[4], ks=3, stride=1, dilation=1),
             ResidualBlock(cs[4], cs[4], ks=3, stride=1, dilation=1),
         )
-
+        
         self.up1 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[4], cs[5], ks=2, stride=2),
             nn.Sequential(
@@ -141,7 +174,7 @@ class SPVCNN(nn.Module):
                 ResidualBlock(cs[6], cs[6], ks=3, stride=1, dilation=1),
             )
         ])
-
+        
         self.up3 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[6], cs[7], ks=2, stride=2),
             nn.Sequential(
@@ -159,7 +192,7 @@ class SPVCNN(nn.Module):
                 ResidualBlock(cs[8], cs[8], ks=3, stride=1, dilation=1),
             )
         ])
-
+        
         self.classifier = nn.Sequential(nn.Linear(cs[8],
                                                   kwargs['num_classes']))
 
@@ -180,6 +213,7 @@ class SPVCNN(nn.Module):
                 nn.ReLU(True),
             )
         ])
+        """
         self.relu = nn.LeakyReLU(negative_slope=0.1)
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
@@ -242,15 +276,46 @@ class SPVCNN(nn.Module):
 
     def forward(self, x):
         # x: SparseTensor z: PointTensor
-        z = PointTensor(x.F, x.C.float())
-        x0 = initial_voxelize(z, self.pres, self.vres)
-        x0 = self.stem(x0)
-        z0 = voxel_to_point(x0, z, nearest=False)
+        z = PointTensor(x.F, x.C.float()) # 4
+        x0 = initial_voxelize(z, self.pres, self.vres) # 4
+        x0 = self.stem(x0) # 4 x 32
+        z0 = voxel_to_point(x0, z, nearest=False) # 32, 4 x 32
         z0.F = z0.F
 
-        x1 = point_to_voxel(x0, z0)
-        x1 = self.stage1(x1)
-        x2 = self.stage2(x1)
+        x1 = point_to_voxel(x0, z0) # 32
+        x1 = self.stage1(x1) # 64
+        x2 = self.stage2(x1) # 128
+
+        z1 = voxel_to_point(x1, z0) # 64, 32 x 64
+        z1.F = z1.F + self.point_transforms[0](z1.F) # 64 x128
+
+        y1 = point_to_voxel(x2, z1) # 128
+        y1.F = self.dropout(y1.F)
+        y1 = self.up1[0](y1) # 64
+        y1 = torchsparse.cat([y1, x1]) # 128
+        y1 = self.up1[1](y1) # 64
+
+        y2 = self.up2[0](y1) # 32
+        y2 = torchsparse.cat([y2, x0]) # 32+32 x
+        y2 = self.up2[1](y2) # 32
+        z2 = voxel_to_point(y2, z0) # 32
+        z2.F = z2.F + self.point_transforms[1](z1.F) # 32
+
+        out = self.classifier(z2.F)
+        out = self.relu(out)
+
+        """
+        
+        # x: SparseTensor z: PointTensor
+        z = PointTensor(x.F, x.C.float())
+        x0 = initial_voxelize(z, self.pres, self.vres)
+        x0 = self.stem(x0) # 32 x 32
+        z0 = voxel_to_point(x0, z, nearest=False) # 32
+        z0.F = z0.F
+
+        x1 = point_to_voxel(x0, z0) # 32
+        x1 = self.stage1(x1) # 64
+        x2 = self.stage2(x1) # 128
         x3 = self.stage3(x2)
         x4 = self.stage4(x3)
         z1 = voxel_to_point(x4, z0)
@@ -281,6 +346,9 @@ class SPVCNN(nn.Module):
         z3.F = z3.F + self.point_transforms[2](z2.F)
         out = self.classifier(z3.F)
         out = self.relu(out)
+        
+        """
         return out
+
 
 
