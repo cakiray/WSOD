@@ -71,7 +71,7 @@ def main() -> None:
     if 'spvnas' in configs.model.name:
         model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
     elif 'spvcnn' in configs.model.name:
-        model = myspvcnn(configs=configs, weights=args.weights)
+        model = myspvcnn(configs=configs, weights=args.weights, pretrained=True)
     elif 'mink' in configs.model.name:
         model = minkunet(args.name)
     else:
@@ -109,8 +109,8 @@ def main() -> None:
 
     trainer.before_train()
     trainer.before_epoch()
+
     model.module._patch()
-    # important
     model.eval()
     
     t1_start = perf_counter()
@@ -131,7 +131,6 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        #model.module._recover()
         if n < 5:
             n += 1
             _inputs = dict()
@@ -148,7 +147,6 @@ def main() -> None:
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets)
 
-            #model.module._patch()
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -158,7 +156,10 @@ def main() -> None:
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
             #print( "backprop calling ", len(peak_list),aggregation)
-        
+
+            # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
+            peak_centers, peak_list = utils.FPS(peak_list, points, num_frags=-1)
+
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                             peak_threshold=peak_threshold, normalize=True)
