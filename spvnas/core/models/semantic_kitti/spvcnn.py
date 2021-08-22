@@ -134,12 +134,12 @@ class SPVCNN(nn.Module):
 
         self.point_transforms = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(cs[1], cs[2]),
+                nn.Linear(cs[0], cs[1]),
                 nn.BatchNorm1d(cs[2]),
                 nn.ReLU(True),
             ),
             nn.Sequential(
-                nn.Linear(cs[2], cs[4]),
+                nn.Linear(cs[1], cs[4]),
                 nn.BatchNorm1d(cs[4]),
                 nn.ReLU(True),
             )
@@ -287,7 +287,7 @@ class SPVCNN(nn.Module):
         x2 = self.stage2(x1) # 128
 
         z1 = voxel_to_point(x1, z0) # 64, 32 x 64
-        z1.F = z1.F + self.point_transforms[0](z1.F) # 64 x128
+        z1.F = z1.F + self.point_transforms[0](z0.F) # 128
 
         y1 = point_to_voxel(x2, z1) # 128
         y1.F = self.dropout(y1.F)
