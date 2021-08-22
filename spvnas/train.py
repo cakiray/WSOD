@@ -22,7 +22,7 @@ from torchpack.utils.logging import logger
 
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE, Shrinkage, MTE
-from model_zoo import spvnas_specialized, spvcnn_specialized
+from model_zoo import spvnas_specialized, spvcnn_specialized, myspvcnn
 from core import builder, utils
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration
@@ -79,15 +79,16 @@ def main() -> None:
             collate_fn=dataset[split].collate_fn)
 
     #model = builder.make_model()
-    if 'spvnas' in args.name.lower():
+    if 'spvnas' in configs.model.name:
         model = spvnas_specialized(args.name, input_channels = configs.data.input_channels , pretrained=False)
-    elif 'spvcnn' in args.name.lower():
-        model = spvcnn_specialized(args.name, weights=args.weights, pretrained=False)
+        model.train()
+        model = model.change_last_layer(configs.data.num_classes)
+    elif 'spvcnn' in configs.model.name:
+        model = myspvcnn(configs=configs, pretrained=False)
+        model.train()
     else:
         raise NotImplementedError
 
-    model.train() 
-    model = model.change_last_layer(configs.data.num_classes)
     print("\nmodel: " ,model )
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
@@ -140,10 +141,9 @@ def main() -> None:
     count, prec_count,recall_count = 0,0,0
     total_bbox_num , total_detected_bbox_num= 0, 0
     bbox_p, bbox_r = 0,0
-
     n,r,p = 0,0,0
+
     for feed_dict in tqdm(dataflow['test'], desc='eval'):
-        
         if n < 5:
             n += 1
             _inputs = dict()
@@ -174,6 +174,8 @@ def main() -> None:
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             
             print("\ncurrent file: ", filename) 
+
+            """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
@@ -187,7 +189,8 @@ def main() -> None:
                             
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
-            
+            """
+
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -199,44 +202,37 @@ def main() -> None:
             fp_bbox = 0
 
             #Calculate mprecision and mrecall of each peak_response individually
-            #for i in range(len(peak_list)):
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
 
-                valid_peak = True
-                # If peak is not a valid peak, meaning has values lower than 1.0 at
-                # each channel of prm, it is not considered in as detected
-                # Because it is probably a false positive
+                points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
+                peak = points[peak_ind[2]] # indx is at 3th element of peak variable
 
-                if valid_peak:
-                    points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
-                    peak = points[peak_ind[2]] # indx is at 3th element of peak variable
+                # Find bbox that the peak belongs to
+                bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
+                if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
+                    fp_bbox += 1
+                    print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
-                    # Find bbox that the peak belongs to
-                    bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
-                    if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
-                        fp_bbox += 1
-                        print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
+                # If each channel of peaks are returned, shape=(N,channel_num)
+                for col in range(prm.shape[1]):
+                    mask_pred = utils.generate_prm_mask(prm[:,col])
+                    # If peak belongs to a bbox
+                    if bbox_idx > -1:
+                        # generate mask for the bbox in interest
+                        prm_target = utils.generate_car_masks(points, bbox_label, calibs).reshape(-1)
+                        # if at least 1 channel of PRM has iou more that 50%, it would be true positive
+                        iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
+                        # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
+                        if iou_bbox[1] > 0.5:
+                            bbox_found_indicator[bbox_idx] = 1
 
-                    #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
-                    # If each channel of peaks are returned, shape=(N,channel_num)
-                    for col in range(prm.shape[1]):
-                        mask_pred = utils.generate_prm_mask(prm[:,col])
-                        # If peak belongs to a bbox
-                        if bbox_idx > -1:
-                            # generate mask for the bbox in interest
-                            prm_target = utils.generate_car_masks(points, bbox_label, calibs).reshape(-1)
-                            # if at least 1 channel of PRM has iou more that 50%, it would be true positive
-                            iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
-                            # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                            if iou_bbox[1] > 0.5:
-                                bbox_found_indicator[bbox_idx] = 1
-
-                    if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
-                        print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
-                    elif bbox_idx > -1:
-                        print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
+                    print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                elif bbox_idx > -1:
+                    print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
             bbox_recall = utils.bbox_recall(labels, bbox_found_indicator)
             bbox_precision = utils.bbox_precision(labels, bbox_found_indicator, fp_bbox)
