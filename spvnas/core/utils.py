@@ -318,8 +318,8 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     # Start with the origin of the model coordinate system.
     peak_centers = [np.array([0., 0., 0.])]
     peak_locs = [] # 3D location of peaks
-    peak_centers_ind = []
     valid_peak_list = []
+    valid_indexes = []
     for i in range(len(peaks_idxs)):
         peak_ind = peaks_idxs[i][2]  #peak_list: [0,0,indx]
         peak_locs.append( points[peak_ind] )
@@ -334,8 +334,7 @@ def FPS(peaks_idxs, points,  num_frags=-1):
         new_center = peak_locs[new_center_ind]
         peak_centers.append(peak_locs[new_center_ind])
         valid_peak_list.append(peaks_idxs[new_center_ind])
-        
-        peak_centers_ind.append(new_center_ind)
+        valid_indexes.append(new_center_ind)
         # Update the distances to the nearest center.
         nn_dists[new_center_ind] = -1
         nn_dists = np.minimum(
@@ -358,4 +357,4 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     #valid_peak_list = torch.tensor(valid_peak_list)
     """
     
-    return peak_centers, valid_peak_list
+    return peak_centers, valid_peak_list, valid_indexes

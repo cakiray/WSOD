@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from torch import autograd
+from core import utils
 
 class PeakStimulation(autograd.Function):
     @staticmethod
@@ -92,7 +93,6 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
             #prm = prm.sum(1) # sums columns
             #peak_response_maps.append( prm / prm.sum() )
-
             peak_response_maps.append(prm)
             peak_response_maps_con +=np.asarray( prm)
             #valid_peak_list contains indexes of valid peaks in center response map, shape: Mx3, e.g.[0,0,idx]
@@ -101,11 +101,16 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     if len(peak_response_maps) >0:
         # shape = len(valid_peak_list), 2
         valid_peak_list = torch.stack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
+
+        # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
+        points = np.asarray(inputs.F[:,0:3].detach().cpu())
+        peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
+        valid_peak_response_map = peak_response_maps[valid_indexes]
         # peak responses of each valid peak list is concatanated vertically
         # shape = (len(valid_peak_list) * number_of_points_in_scene), channel_no_of_grad
         #peak_response_maps_con = torch.cat(peak_response_maps, 0)
         #peak_response_maps_con = sum(peak_response_maps)
         #print("# of peak responses and shape ", len(peak_response_maps), valid_peak_list.shape, peak_response_maps[0].shape)
         
-    return valid_peak_list, peak_response_maps, peak_response_maps_con
+    return valid_peak_list, valid_peak_response_map, peak_response_maps_con
 
