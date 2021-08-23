@@ -88,7 +88,7 @@ class SPVCNN(nn.Module):
         cr = kwargs.get('cr', 1.0)
         input_channels = kwargs.get('input_channels', 4)
         #cs = [32, 32, 64, 128, 256, 256, 128, 96, 96]
-        cs = [32, 64, 128, 64, 32]
+        cs = [16, 32, 64, 32, 16]
         cs = [int(cr * x) for x in cs]
         self.cs = cs
         if 'pres' in kwargs and 'vres' in kwargs:
@@ -134,12 +134,12 @@ class SPVCNN(nn.Module):
 
         self.point_transforms = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(cs[0], cs[1]),
+                nn.Linear(cs[0], cs[2]),
                 nn.BatchNorm1d(cs[2]),
                 nn.ReLU(True),
             ),
             nn.Sequential(
-                nn.Linear(cs[1], cs[4]),
+                nn.Linear(cs[2], cs[4]),
                 nn.BatchNorm1d(cs[4]),
                 nn.ReLU(True),
             )
@@ -286,7 +286,7 @@ class SPVCNN(nn.Module):
         x1 = self.stage1(x1) # 64
         x2 = self.stage2(x1) # 128
 
-        z1 = voxel_to_point(x1, z0) # 64, 32 x 64
+        z1 = voxel_to_point(x2, z0) # 64, 32 x 64
         z1.F = z1.F + self.point_transforms[0](z0.F) # 128
 
         y1 = point_to_voxel(x2, z1) # 128

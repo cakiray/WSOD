@@ -179,12 +179,12 @@ class SPVNAS(RandomNet):
         self.weight_initialization()
         
     def change_last_layer(self, num_classes):
-        """
+        
         for name, param in self.named_parameters():
             param.requires_grad = True
         for name, module in self.named_modules():
             module.requires_grad_(True)
-        """
+        
         # change last classifier layer's output channel and make it trainable, by default
         
         self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
@@ -338,7 +338,7 @@ class SPVNAS(RandomNet):
                 module.manual_select(sample[name])
 
         cur_outputs_channels = copy.deepcopy(sample['output_channels'])
-
+    
         # fix point branch
         self.point_transforms[0].manual_select(
             cur_outputs_channels[self.num_down_stages])

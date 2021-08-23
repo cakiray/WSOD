@@ -2,8 +2,9 @@ import os
 import numpy as np
 import struct
 import open3d
+import torch 
 
-__all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou', 'generate_car_masks',  'generate_prm_mask']
+__all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou', 'generate_car_masks',  'generate_prm_mask', 'FPS']
 
 def load_pc(f):
     file = open(f, 'rb')
@@ -312,12 +313,13 @@ def FPS(peaks_idxs, points,  num_frags=-1):
       storing for each vertex the ID of the assigned fragment.
     """
     if num_frags == -1:
-        num_frags = len(peaks_idxs)/5
-
+        num_frags = len(peaks_idxs)//5
+    print("num ", num_frags)
     # Start with the origin of the model coordinate system.
     peak_centers = [np.array([0., 0., 0.])]
     peak_locs = [] # 3D location of peaks
     peak_centers_ind = []
+    valid_peak_list = []
     for i in range(len(peaks_idxs)):
         peak_ind = peaks_idxs[i][2]  #peak_list: [0,0,indx]
         peak_locs.append( points[peak_ind] )
@@ -331,6 +333,8 @@ def FPS(peaks_idxs, points,  num_frags=-1):
         new_center_ind = np.argmax(nn_dists)
         new_center = peak_locs[new_center_ind]
         peak_centers.append(peak_locs[new_center_ind])
+        valid_peak_list.append(peaks_idxs[new_center_ind])
+        
         peak_centers_ind.append(new_center_ind)
         # Update the distances to the nearest center.
         nn_dists[new_center_ind] = -1
@@ -340,13 +344,18 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     # Remove the origin.
     peak_centers.pop(0)
     peak_centers = np.array(peak_centers) # 3D info of peak centers
-
+    print("peak cen ", len(peak_centers))
+    """
     # Assign vertices to the fragments.
     # TODO: This information can be maintained during the FPS algorithm.
     nn_index = spatial.cKDTree(peak_centers)
+    print("nnind", nn_index)
     _, vertex_frag_ids_in_peakindxs = nn_index.query(peak_locs, k=1)
-
+    print("vertex ", vertex_frag_ids_in_peakindxs)
     valid_peak_list = []
     for idx in vertex_frag_ids_in_peakindxs:
         valid_peak_list.append( peaks_idxs[idx] )
+    #valid_peak_list = torch.tensor(valid_peak_list)
+    """
+    
     return peak_centers, valid_peak_list
