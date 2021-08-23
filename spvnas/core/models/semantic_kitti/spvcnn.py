@@ -98,26 +98,27 @@ class SPVCNN(nn.Module):
         self.stem = nn.Sequential(
             spnn.Conv3d(input_channels, cs[0], kernel_size=3, stride=1),
             spnn.BatchNorm(cs[0]), spnn.ReLU(True),
-            spnn.Conv3d(cs[0], cs[0], kernel_size=3, stride=1),
-            spnn.BatchNorm(cs[0]), spnn.ReLU(True))
+            #spnn.Conv3d(cs[0], cs[0], kernel_size=3, stride=1),
+            #spnn.BatchNorm(cs[0]), spnn.ReLU(True)
+        )
 
         self.stage1 = nn.Sequential(
             BasicConvolutionBlock(cs[0], cs[0], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[0], cs[1], ks=3, stride=1, dilation=1),
-            ResidualBlock(cs[1], cs[1], ks=3, stride=1, dilation=1),
+            #ResidualBlock(cs[1], cs[1], ks=3, stride=1, dilation=1),
         )
 
         self.stage2 = nn.Sequential(
             BasicConvolutionBlock(cs[1], cs[1], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[1], cs[2], ks=3, stride=1, dilation=1),
-            ResidualBlock(cs[2], cs[2], ks=3, stride=1, dilation=1),
+            #ResidualBlock(cs[2], cs[2], ks=3, stride=1, dilation=1),
         )
         self.up1 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[2], cs[3], ks=2, stride=2),
             nn.Sequential(
                 ResidualBlock(cs[3] + cs[1], cs[3], ks=3, stride=1,
                               dilation=1),
-                ResidualBlock(cs[3], cs[3], ks=3, stride=1, dilation=1),
+                #ResidualBlock(cs[3], cs[3], ks=3, stride=1, dilation=1),
             )
         ])
 
@@ -126,7 +127,7 @@ class SPVCNN(nn.Module):
             nn.Sequential(
                 ResidualBlock(cs[4] + cs[0], cs[4], ks=3, stride=1,
                               dilation=1),
-                ResidualBlock(cs[4], cs[4], ks=3, stride=1, dilation=1),
+                #ResidualBlock(cs[4], cs[4], ks=3, stride=1, dilation=1),
             )
         ])
         self.classifier = nn.Sequential(nn.Linear(cs[4],
@@ -278,7 +279,7 @@ class SPVCNN(nn.Module):
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float()) # 4
         x0 = initial_voxelize(z, self.pres, self.vres) # 4
-        x0 = self.stem(x0) # 4 x 32
+        x0 = self.stem(x0) # 32
         z0 = voxel_to_point(x0, z, nearest=False) # 32, 4 x 32
         z0.F = z0.F
 
