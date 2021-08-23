@@ -151,23 +151,26 @@ def main() -> None:
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
             outputs_bcn = outputs_bcn.permute(0,2,1)
+            points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
 
             # peak backpropagation
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
-            #print( "backprop calling ", len(peak_list),aggregation)
-
+            print( "peak_Sti peak len", len(peak_list),aggregation)
+                        
             # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
             peak_centers, peak_list = utils.FPS(peak_list, points, num_frags=-1)
 
+            print("peak_list after FPS ", len(peak_list)) 
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                             peak_threshold=peak_threshold, normalize=True)
-
+            print("peak list after backprop ", len(peak_list)) 
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
              
             print("\ncurrent file: ", filename) 
+            """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
@@ -181,7 +184,7 @@ def main() -> None:
                             
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
-            
+            """
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -235,6 +238,7 @@ def main() -> None:
                 for c in range(prm.shape[1]):
                     if prm[peak_ind[2]][c] < 1.0:
                         valid_peak = False
+                valid_peak = True
                 # If peak is not a valid peak, meaning has values lower than 1.0 at
                 # each channel of prm, it is not considered in as detected
                 # Because it is probably a false positive
@@ -272,7 +276,8 @@ def main() -> None:
                                 # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
                                 if iou_bbox[1] > 0.5:
                                     bbox_found_indicator[bbox_idx] = 1
-                                print("iou prec: ", iou_bbox[1])
+                                else:
+                                    print(  "IOU : ", iou_bbox[1])
                     if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
                         print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
                     elif bbox_idx >- 1:
