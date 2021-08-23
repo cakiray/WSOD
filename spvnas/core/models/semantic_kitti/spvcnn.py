@@ -88,7 +88,7 @@ class SPVCNN(nn.Module):
         cr = kwargs.get('cr', 1.0)
         input_channels = kwargs.get('input_channels', 4)
         #cs = [32, 32, 64, 128, 256, 256, 128, 96, 96]
-        cs = [16, 32, 64, 32, 16]
+        cs = [32, 64, 128, 64, 32]
         cs = [int(cr * x) for x in cs]
         self.cs = cs
         if 'pres' in kwargs and 'vres' in kwargs:
