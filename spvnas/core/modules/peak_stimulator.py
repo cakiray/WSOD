@@ -58,6 +58,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     
     valid_peak_list = []
     peak_response_maps = []
+    valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
 
     for idx in range(peak_list.size(0)):
