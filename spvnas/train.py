@@ -89,7 +89,8 @@ def main() -> None:
     else:
         raise NotImplementedError
 
-    print("\nmodel: " ,model )
+    print("Number of Params in Model: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    #print("\nmodel: " ,model )
     model = torch.nn.parallel.DistributedDataParallel(
         model.cuda(),
         device_ids=[dist.local_rank()],
@@ -116,9 +117,9 @@ def main() -> None:
         callbacks=[InferenceRunner(
             dataflow[split],
             callbacks=[MSE(name=f'mse/{split}')])
-                      for split in ['test']
+                      for split in ['valid']
                   ] + [
-                      MinSaver(scalar='mse/test',name=dt_string, save_dir=configs.best_model ),
+                      MinSaver(scalar='mse/valid',name=dt_string, save_dir=configs.best_model ),
                       Saver(save_dir=configs.checkpoints),
                       TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
                   ])
@@ -157,6 +158,8 @@ def main() -> None:
             # outputs are got 1-by-1 in test phase
             inputs.F.requires_grad = True
             outputs = model(inputs) # voxelized output (N,1)
+            loss = criterion(outputs, targets)
+            print("loss ", loss)
 
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
@@ -228,7 +231,8 @@ def main() -> None:
                         # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
                         if iou_bbox[1] > 0.5:
                             bbox_found_indicator[bbox_idx] = 1
-
+                        else:
+                            print("iou ", iou_bbox[1])
                 if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
                     print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
                 elif bbox_idx > -1:
