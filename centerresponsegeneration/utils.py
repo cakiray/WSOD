@@ -2,7 +2,7 @@ import os
 import numpy as np
 import struct
 import open3d
-from calibration import *
+from .calibration import *
 
 def load_pc(f):
     file = open(f, 'rb')
@@ -40,6 +40,49 @@ def read_points( lidar_path, idx):
     file = open(path, 'rb')
     points = np.fromfile(file, dtype=np.float32).reshape(-1, 4)[:,0:3]  # .astype(np.float16)
     return points
+
+def visualize_prm(pc, prm, bboxes=None):
+    pcd=open3d.open3d.geometry.PointCloud()
+    pcd.points= open3d.open3d.utility.Vector3dVector(pc[:, 0:3])
+    color = np.zeros((prm.shape[0], 3))
+    if len(prm.shape) >1 and prm.shape[1]==1:
+        color[:,0] = prm[:,0]
+    else:
+        color[:,0] = prm
+    pcd.colors = open3d.open3d.utility.Vector3dVector(color)
+
+    mask = prm>0.0
+    pc_ = pc[mask]
+    pc_ = open3d.utility.Vector3dVector(pc[mask][:,0:3])
+
+    bbox = open3d.geometry.AxisAlignedBoundingBox()
+    bbox.color = [1,0,1]
+    bbox = bbox.create_from_points(pc_)
+
+    if bboxes is not None:
+        # Our lines span from points 0 to 1, 1 to 2, 2 to 3, etc...
+        lines = [[0, 1], [1, 2], [2, 3], [0, 3],
+                 [4, 5], [5, 6], [6, 7], [4, 7],
+                 [0, 4], [1, 5], [2, 6], [3, 7]]
+        lenght = len(lines)
+        for i in range(len(bboxes)//8-1): #for multiple lines, need to extend lines
+            newlines = [[0,0] for _ in range(lenght)]
+            for j in range(lenght):
+                newlines[j][0] = lines[j][0] + (8 * (i+1))
+                newlines[j][1] = lines[j][1] + (8 * (i+1))
+            # newlines will span 8 to 9, 9 to 10, so on...
+            lines.extend(newlines)
+        # Use the same color for all lines
+        clrs = [[0, 1, 0] for _ in range(len(lines))]
+
+        line_set = open3d.open3d.geometry.LineSet()
+        line_set.points = open3d.open3d.utility.Vector3dVector(bboxes)
+        line_set.lines = open3d.open3d.utility.Vector2iVector(lines)
+        line_set.colors = open3d.open3d.utility.Vector3dVector(clrs)
+        open3d.open3d.visualization.draw_geometries([pcd,line_set, bbox])
+    else:
+        open3d.open3d.visualization.draw_geometries([pcd, bbox])
+
 def visualize_pointcloud_orig( pc, boxes=None):
     pcd=open3d.open3d.geometry.PointCloud()
     pcd.points= open3d.open3d.utility.Vector3dVector(pc[:, 0:3])

@@ -13,7 +13,7 @@ import numpy as np
 from centerresponsegeneration.config import *
 from centerresponsegeneration.utils import *
 from centerresponsegeneration.calibration import Calibration
-
+from spvnas.core.utils import *
 # Press the green button in the gutter to run the script.
 
 def train_basicCNN():
@@ -174,11 +174,11 @@ def train_SPCNN(device):
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-    root = "/Users/ezgicakir/Downloads/outputs_prm_from_train-3"
+    root = "/Users/ezgicakir/Downloads/5epo_spvnas"
     filenames = os.listdir(root)
 
     for file in filenames:
-        if 'prm' not in file and 'npy' in file:
+        if 'prm' not in file and 'gt' not in file and 'npy' in file:
             orig_pc_file = open (os.path.join(root_dir, data_train_path, file.replace('npy', 'bin')), 'rb')
             orig_pc = np.fromfile(orig_pc_file, dtype=np.float32).reshape(-1, 4)#[:,0:3]
             crm = np.load( os.path.join(root_dir, crm_train_path_pc, file)).astype(float)
@@ -186,41 +186,25 @@ if __name__ == '__main__':
             label_file = os.path.join(root_dir, labels_path, file.replace('npy', 'txt'))
             calibs = Calibration( os.path.join(root_dir, calib_train_path), file.replace('npy', 'txt'))
             lines = read_labels( label_file)
-            #pc_filename = file.split('.')[0] + '_pc.' + file.split('.')[-1]
-            #pc = np.load( os.path.join(root, pc_filename)).astype(float)
 
             out = np.load( os.path.join(root, file)).astype(float)
             pc = out[:,0:4]
-            out = out[:,4:5]
-            #prm_naive_file = os.path.join(root, file.replace('.npy', '_prm_naive.npy'))
-            #if not os.path.exists(prm_naive_file):
-            #    continue
-            #prm_naive = np.load(prm_naive_file).astype(float)
-
-            prm_file = os.path.join(root, file.replace('.npy', '_prm.npy'))
-            if not os.path.exists(prm_file):
-                continue
-            prm = np.load(prm_file).astype(float)
+            out = out[:,-1].reshape(-1,1)
 
             bboxes = get_bboxes(labels=lines, calibs=calibs)
-
-            print(os.path.join(root, file))
-            png_name = file.replace('npy', 'png')
-            print(orig_pc)
-            print(pc)
-            print("crm limits: ", np.max(crm), np.min(crm))
+            print("file: ", file)
             print("output limits: ", np.max(out), np.min(out))
-            #print("prm limits: ", np.max(prm[:,0:3]), np.min(prm[:,0:3]))
-            #print("prm limits: ", np.max(prm), np.min(prm))
-            #print("prm_naive limits: ", np.max(prm_naive), np.min(prm_naive))
-            print(np.argmax(prm, axis=0))
-            #print(prm[17314,0], prm[4294,1],prm[9984,2],prm[ 18585,3])
-            #prm = prm - np.min(prm[:,0:3])
-            print("prm limits: ", np.max(prm[:,0:3]), np.min(prm[:,0:3]))
-            visualize_pointcloud( orig_pc, crm, bboxes, idx=0)
-            visualize_pointcloud( pc, out, bboxes , mult= 10, idx=0)
-            #visualize_pointcloud( pc, prm, bboxes , idx=0, mult=1)
-            for i in range(3):
-                print(prm[:,i])
-                visualize_pointcloud( pc, prm[:,i], bboxes , idx=i, mult=1000)
-            #visualize_pointcloud( pc, prm_naive, bboxes , idx=0)
+            visualize_pointcloud( pc, out, bboxes, mult=5, idx=0)
+
+            for i in range(-10):
+                prm_file = os.path.join(root, file.replace('.npy', f'_prm_{i}.npy'))
+                if not os.path.exists(prm_file):
+                    break
+                prm = np.load(prm_file).astype(float)
+                print("prm limits: ", (prm[:,0]>0.0).sum(0), np.max(prm[:,0]), np.min(prm[:,0]))
+                prm = prm[:,0]
+                #mask = prm<0.00005
+                #prm[mask] =0.0
+                prm_ = generate_prm_mask(prm)
+                #visualize_pointcloud( pc, prm_, bboxes , idx=0, mult=5)
+                visualize_prm(pc, prm_, bboxes=bboxes)
