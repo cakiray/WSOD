@@ -20,7 +20,8 @@ class PreHook(Function):
     @staticmethod
     def backward(ctx, grad_output):
         input, offset = ctx.saved_variables
-        print("prehook nonzero gradout ", (grad_output!=0.0).sum(0))
+        #print("prehook nonzero gradout ", (grad_output!=0.0).sum(0))
+        print("prehook grad: ",torch.sum(grad_output) )
         return (input - offset) * grad_output, None
 
 class PostHook(Function):
@@ -33,11 +34,12 @@ class PostHook(Function):
     @staticmethod
     def backward(ctx, grad_output):
         norm_factor, = ctx.saved_variables
-        eps =0# 1e-10
+        eps = 1e-10
         zero_mask = norm_factor <= eps
         grad_input = grad_output / (torch.abs(norm_factor) + eps)
         grad_input[zero_mask.detach()] = 0
-        print("posthook nonzero gradout ",zero_mask.sum(0), (grad_output!=0.0).sum(0))
+        #print("posthook nonzero gradout ",zero_mask.sum(0), (grad_output!=0.0).sum(0))
+        print("posthook grad", torch.sum(grad_output) )
         return None, grad_input
 
 

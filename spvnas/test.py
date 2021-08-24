@@ -81,6 +81,7 @@ def main() -> None:
         model.cuda(),
         device_ids=[dist.local_rank()],
         find_unused_parameters=True)
+
     model.eval()
 
     criterion = builder.make_criterion()
@@ -131,7 +132,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if n < 5:
+        if n < 10:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -146,7 +147,7 @@ def main() -> None:
         
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets)
-
+            print("\n\nloss: ", loss)
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -156,32 +157,32 @@ def main() -> None:
             # peak backpropagation
             peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
-            print( "peak_Sti peak len", len(peak_list),aggregation)
+            #print( "peak_Sti peak len", len(peak_list),aggregation)
                         
             # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
-            peak_centers, peak_list = utils.FPS(peak_list, points, num_frags=-1)
+            #peak_centers, peak_list = utils.FPS(peak_list, points, num_frags=-1)
+            #print("peak_list after FPS ", len(peak_list)) 
 
-            print("peak_list after FPS ", len(peak_list)) 
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                             peak_threshold=peak_threshold, normalize=True)
-            print("peak list after backprop ", len(peak_list)) 
+            #print("peak list after backprop ", len(peak_list)) 
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
              
-            print("\ncurrent file: ", filename) 
-            """
+            #print("\ncurrent file: ", filename) 
+            
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
             concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
             np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-            if len(peak_list) >0:    
+            """if len(peak_list) >0:    
                     
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-                            
+                
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
             """
@@ -250,7 +251,7 @@ def main() -> None:
                     bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
                     if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
                         fp_bbox += 1
-                        print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                        #print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
                     #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
                     # If each channel of peaks are returned, shape=(N,channel_num)
@@ -274,21 +275,23 @@ def main() -> None:
                                 # if at least 1 channel of PRM has iou more that 50%, it would be true positive
                                 iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
                                 # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                                if iou_bbox[1] > 0.5:
+                                if iou_bbox[1] >= 0.25:
                                     bbox_found_indicator[bbox_idx] = 1
-                                else:
-                                    print(  "IOU : ", iou_bbox[1])
+                                
+                                #print(  "IOU : ", iou_bbox[1])
+                            if not np.isnan(np.sum(prec)):
+                                mprecision += prec
+                                prec_count += 1
+                            if not np.isnan(np.sum(recall)):
+                                mrecall += recall
+                                recall_count += 1
+                    
                     if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
-                        print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+                        pass
+                        #print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
                     elif bbox_idx >- 1:
-                        print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
-
-                        if not np.isnan(np.sum(prec)):
-                            mprecision += prec
-                            prec_count += 1
-                        if not np.isnan(np.sum(recall)):
-                            mrecall += recall
-                            recall_count += 1
+                        pass
+                        #print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
 
             #Calculation of mean IoU on CRM
             crm = outputs.cpu()

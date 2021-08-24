@@ -67,7 +67,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         if peak_val > peak_threshold:
             grad_output.zero_()
             # Set 1 to the max of predicted center points in gradient
-            grad_output[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]] = 1
+            grad_output[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]] = 1e10
             #grad_output = torch.ones_like(outputs)
             
             if inputs.F.grad is not None:
@@ -81,13 +81,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             prm = grad.detach().cpu().clone()
             print("prm nonzero ", (prm!=0.0).sum(0))
             prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
-
+            prm = np.asarray(prm)
             #normalize gradient 0 <= prm <= 1
             if normalize:
-                mins= np.amin(np.array(prm[prm>0.0]), axis=0)
+                #mins= np.amin(np.array(prm[prm>0.0]), axis=0)
+                mins = np.asarray( [ np.amin(prm[prm[:,i]>0.0][:,i]) for i in range(prm.shape[1]) ] )
                 maxs = np.amax(np.array(prm), axis=0)
                 prm = (prm-mins)/(maxs-mins)
-                print("min max ", mins, maxs)
+                #print("min max ", mins, maxs)
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
 
@@ -102,11 +103,15 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     if len(peak_response_maps) >0:
         # shape = len(valid_peak_list), 2
         valid_peak_list = torch.stack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
-
+        
+        # Further point sampling 
         # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
+        
         points = np.asarray(inputs.F[:,0:3].detach().cpu())
         peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
-        valid_peak_response_map = peak_response_maps[valid_indexes]
+        valid_peak_response_map = [peak_response_maps[i] for i in valid_indexes]
+        
+        
         # peak responses of each valid peak list is concatanated vertically
         # shape = (len(valid_peak_list) * number_of_points_in_scene), channel_no_of_grad
         #peak_response_maps_con = torch.cat(peak_response_maps, 0)
