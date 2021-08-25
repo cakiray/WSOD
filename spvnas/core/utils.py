@@ -4,7 +4,8 @@ import struct
 import open3d
 import torch 
 
-__all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou', 'generate_car_masks',  'generate_prm_mask', 'FPS']
+__all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou',
+            'generate_car_masks',  'generate_prm_mask', 'FPS', 'KNN']
 
 def load_pc(f):
     file = open(f, 'rb')
@@ -344,17 +345,14 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     peak_centers.pop(0)
     peak_centers = np.array(peak_centers) # 3D info of peak centers
     
-    """
-    # Assign vertices to the fragments.
-    # TODO: This information can be maintained during the FPS algorithm.
-    nn_index = spatial.cKDTree(peak_centers)
-    print("nnind", nn_index)
-    _, vertex_frag_ids_in_peakindxs = nn_index.query(peak_locs, k=1)
-    print("vertex ", vertex_frag_ids_in_peakindxs)
-    valid_peak_list = []
-    for idx in vertex_frag_ids_in_peakindxs:
-        valid_peak_list.append( peaks_idxs[idx] )
-    #valid_peak_list = torch.tensor(valid_peak_list)
-    """
-    
     return peak_centers, valid_peak_list, valid_indexes
+
+def KNN(points, anchor, k=10):
+    points = points.detach().cpu().clone()
+    pcd=open3d.open3d.geometry.PointCloud()
+    pcd.points= open3d.open3d.utility.Vector3dVector(points[:, 0:3])
+    pcd_tree = open3d.geometry.KDTreeFlann(pcd)
+
+    [k, idxs, _] = pcd_tree.search_knn_vector_3d(pcd.points[anchor], k)
+    print("KNN k, idx ", k, idxs)
+    return idxs

@@ -67,9 +67,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         if peak_val > peak_threshold:
             grad_output.zero_()
             # Set 1 to the max of predicted center points in gradient
-            grad_output[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]] = 1e10
+            #grad_output[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]] = 1e10
             #grad_output = torch.ones_like(outputs)
-            
+
+            # Set K nearest neighbors of peak as 1, backpropagate from a group of points
+            knn_list = utils.KNN(points=inputs, anchor=peak_list[idx,2], k=10)
+            for n in knn_list:
+                grad_output[0, 0, n] = 1
+
             if inputs.F.grad is not None:
                 inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
 
