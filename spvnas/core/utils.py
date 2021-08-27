@@ -354,5 +354,5 @@ def KNN(points, anchor, k=10):
     pcd_tree = open3d.geometry.KDTreeFlann(pcd)
 
     [k, idxs, _] = pcd_tree.search_knn_vector_3d(pcd.points[anchor], k)
-    print("KNN k, idx ", k, idxs)
+
     return idxs
