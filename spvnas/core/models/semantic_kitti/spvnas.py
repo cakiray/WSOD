@@ -405,6 +405,57 @@ class SPVNAS(RandomNet):
         z = PointTensor(x.F, x.C.float())
         #x0 = initial_voxelize(z, self.pres, self.vres)
         x0 = point_to_voxel(x, z)
+
+        x0 = self.stem(x0)
+        z0 = voxel_to_point(x0, z)
+        z0.F = z0.F  #+ self.point_transforms[0](z.F)
+        x1 = point_to_voxel(x0, z0)
+        x1 = self.downsample[0](x1)
+        x2 = self.downsample[1](x1)
+        #x3 = self.downsample[2](x2)
+        #x4 = self.downsample[3](x3)
+
+        # point transform 32 to 256
+        """z1 = voxel_to_point(x4, z0)
+        z1.F = z1.F + self.point_transforms[0](z0.F)
+
+        y1 = point_to_voxel(x4, z1)
+        y1.F = self.dropout(y1.F)
+        y1 = self.upsample[0].transition(y1)
+        y1 = torchsparse.cat([y1, x3])
+
+        y1 = self.upsample[0].feature(y1)
+        
+        y1 = point_to_voxel(x3, z0)
+        y2 = self.upsample[1].transition(y1)
+        y2 = torchsparse.cat([y2, x2])
+
+        y2 = self.upsample[1].feature(y2)
+        """
+        # point transform 256 to 128
+        y2 = point_to_voxel(x2, z0)
+        z2 = voxel_to_point(y2, z0)
+        z2.F = z2.F + self.point_transforms[1](z0.F)
+
+        y3 = point_to_voxel(y2, z2)
+        y3.F = self.dropout(y3.F)
+        y3 = self.upsample[2].transition(y3)
+        y3 = torchsparse.cat([y3, x1])
+        y3 = self.upsample[2].feature(y3)
+
+        y4 = self.upsample[3].transition(y3)
+        y4 = torchsparse.cat([y4, x0])
+        y4 = self.upsample[3].feature(y4)
+        z3 = voxel_to_point(y4, z2)
+        z3.F = z3.F + self.point_transforms[2](z2.F)
+
+        self.classifier.set_in_channel(z3.F.shape[-1])
+        out = self.classifier(z3.F)
+        """
+        # x: SparseTensor z: PointTensor
+        z = PointTensor(x.F, x.C.float())
+        #x0 = initial_voxelize(z, self.pres, self.vres)
+        x0 = point_to_voxel(x, z)
         
         x0 = self.stem(x0)
         z0 = voxel_to_point(x0, z)
@@ -414,11 +465,11 @@ class SPVNAS(RandomNet):
         x2 = self.downsample[1](x1)
         x3 = self.downsample[2](x2)
         x4 = self.downsample[3](x3)
-
+        
         # point transform 32 to 256
         z1 = voxel_to_point(x4, z0)
         z1.F = z1.F + self.point_transforms[0](z0.F)
-
+    
         y1 = point_to_voxel(x4, z1)
         y1.F = self.dropout(y1.F)
         y1 = self.upsample[0].transition(y1)
@@ -448,6 +499,8 @@ class SPVNAS(RandomNet):
 
         self.classifier.set_in_channel(z3.F.shape[-1])
         out = self.classifier(z3.F)
+        
+        """
         out = self.relu(out)
         
         return out
