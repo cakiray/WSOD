@@ -426,18 +426,16 @@ class SPVNAS(RandomNet):
 
         y1 = self.upsample[0].feature(y1)
         
-        y1 = point_to_voxel(x3, z0)
         y2 = self.upsample[1].transition(y1)
         y2 = torchsparse.cat([y2, x2])
 
         y2 = self.upsample[1].feature(y2)
         """
         # point transform 256 to 128
-        y2 = point_to_voxel(x2, z0)
-        z2 = voxel_to_point(y2, z0)
+        z2 = voxel_to_point(x2, z0)
         z2.F = z2.F + self.point_transforms[1](z0.F)
 
-        y3 = point_to_voxel(y2, z2)
+        y3 = point_to_voxel(x2, z2)
         y3.F = self.dropout(y3.F)
         y3 = self.upsample[2].transition(y3)
         y3 = torchsparse.cat([y3, x1])
