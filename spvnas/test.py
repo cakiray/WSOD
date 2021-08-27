@@ -170,14 +170,14 @@ def main() -> None:
             #save the subsampled output and subsampled point cloud
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
              
-            #print("\ncurrent file: ", filename) 
+            print("\ncurrent file: ", filename) 
             
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
             # concat_in_out.shape[0]x5, first 4 column is pc, last 1 column is output
             concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1) 
             np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-            """if len(peak_list) >0:    
+            if len(peak_list) >0:    
                     
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
@@ -185,7 +185,7 @@ def main() -> None:
                 
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
-            """
+            
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
