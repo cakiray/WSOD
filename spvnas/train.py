@@ -85,7 +85,7 @@ def main() -> None:
         model = model.change_last_layer(configs.data.num_classes)
     elif 'spvcnn' in configs.model.name:
         #model = myspvcnn(configs=configs, pretrained=False)
-        model = spvcnn(args.name, input_channels = configs.data.input_channels, pretrained=False,)
+        model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False,)
         model.train()
     else:
         raise NotImplementedError

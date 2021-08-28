@@ -132,8 +132,9 @@ def spvcnn(net_id, pretrained=True, **kwargs):
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvcnn/%s/' % net_id)
     ))
     input_channels = kwargs.get('input_channels', 4)
+    num_classes = kwargs.get('input_channels', net_config['num_classes'])
     model = SPVCNN(
-        num_classes= net_config['num_classes'],
+        num_classes= num_classes,
         input_channels=input_channels,
         cr=net_config['cr'],
         pres=net_config['pres'],
