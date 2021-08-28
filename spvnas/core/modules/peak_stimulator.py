@@ -68,10 +68,10 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         print("prm nonzero ", (prm!=0.0).sum(0))
         prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
         prm = np.asarray(prm)
-        return peak_list, prm, prm
+        return peak_list, [prm], prm
 
     else:
-        return peak_list, np.zeros_like(inputs.F), np.zeros_like(inputs.F)
+        return [], [], []
     valid_peak_list = []
     peak_response_maps = []
     valid_peak_response_map = []
