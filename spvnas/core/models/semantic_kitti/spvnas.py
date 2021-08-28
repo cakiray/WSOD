@@ -29,8 +29,8 @@ class SPVNAS(RandomNet):
     
     # [base_channels, 32, 64, 128, 256, 256, 128, 96, 96]
     output_channels_lb = [base_channels, 16, 32, 64, 128, 128, 64, 48, 48]
-    #output_channels = [base_channels, 48, 96, 192, 384, 384, 192, 128, 128]
-    output_channels = [base_channels, 48, 48, 96, 192, 192, 96, 48, 48]
+    output_channels = [base_channels, 48, 96, 192, 384, 384, 192, 128, 128]
+    #output_channels = [base_channels, 48, 48, 96, 192, 192, 96, 48, 48]
 
     max_macro_depth = 2
     max_micro_depth = 2
@@ -102,7 +102,7 @@ class SPVNAS(RandomNet):
                                         ks=3,
                                         stride=1,
                                         dilation=1),
-                                    """
+                                    
                                     DynamicResidualBlock(
                                         output_channels[i],
                                         output_channels[i],
@@ -110,7 +110,7 @@ class SPVNAS(RandomNet):
                                         ks=3,
                                         stride=1,
                                         dilation=1)
-                                    """
+                                    
                                 ],
                                 depth_min=macro_depth_constraint))
                     ])))
@@ -143,7 +143,7 @@ class SPVNAS(RandomNet):
                                         ks=3,
                                         stride=1,
                                         dilation=1),
-                                    """
+                            
                                     DynamicResidualBlock(
                                         new_base_channels,
                                         new_base_channels,
@@ -151,7 +151,7 @@ class SPVNAS(RandomNet):
                                         ks=3,
                                         stride=1,
                                         dilation=1)
-                                    """
+                                    
                                 ],
                                 depth_min=macro_depth_constraint))
                     ])))
