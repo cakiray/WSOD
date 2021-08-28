@@ -22,7 +22,7 @@ from torchpack.utils.logging import logger
 
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE, Shrinkage, MTE
-from model_zoo import spvnas_specialized, spvcnn_specialized, myspvcnn
+from model_zoo import spvnas_specialized, spvcnn_specialized, myspvcnn, spvcnn
 from core import builder, utils
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration
@@ -84,7 +84,8 @@ def main() -> None:
         model.train()
         model = model.change_last_layer(configs.data.num_classes)
     elif 'spvcnn' in configs.model.name:
-        model = myspvcnn(configs=configs, pretrained=False)
+        #model = myspvcnn(configs=configs, pretrained=False)
+        model = spvcnn(args.name, input_channels = configs.data.input_channels, pretrained=False,)
         model.train()
     else:
         raise NotImplementedError
@@ -229,7 +230,7 @@ def main() -> None:
                         # if at least 1 channel of PRM has iou more that 50%, it would be true positive
                         iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
                         # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                        if iou_bbox[1] > 0.5:
+                        if iou_bbox[1] > 0.3:
                             bbox_found_indicator[bbox_idx] = 1
                         else:
                             print("iou ", iou_bbox[1])
