@@ -68,6 +68,12 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         print("prm nonzero ", (prm!=0.0).sum(0))
         prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
         prm = np.asarray(prm)
+        if normalize:
+            mins = np.asarray( [ np.amin(prm[prm[:,i]>0.0][:,i]) for i in range(prm.shape[1]) ] )
+            maxs = np.amax(np.array(prm), axis=0)
+            prm = (prm-mins)/(maxs-mins)
+            prm[prm==float('inf')] = 0.0
+            prm[prm==float('-inf')] = 0.0
         return peak_list, [prm], prm
 
     else:
