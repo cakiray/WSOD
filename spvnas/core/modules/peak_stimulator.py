@@ -55,7 +55,23 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
-    
+    if torch.max(outputs) > peak_threshold:
+
+        if inputs.F.grad is not None:
+            inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
+
+            # Calculate peak response maps backwarding the output
+        outputs.backward(outputs, retain_graph=True)
+        grad = inputs.F.grad # N x input_channel_num
+        # PRM is absolute of all channels
+        prm = grad.detach().cpu().clone()
+        print("prm nonzero ", (prm!=0.0).sum(0))
+        prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
+        prm = np.asarray(prm)
+        return peak_list, prm, prm
+
+    else:
+        return peak_list, np.zeros_like(inputs.F), np.zeros_like(inputs.F)
     valid_peak_list = []
     peak_response_maps = []
     valid_peak_response_map = []
