@@ -131,9 +131,10 @@ def spvcnn(net_id, pretrained=True, **kwargs):
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvcnn/%s/' % net_id)
     ))
-
+    input_channels = kwargs.get('input_channels', 4)
     model = SPVCNN(
         num_classes= net_config['num_classes'],
+        input_channels=input_channels,
         cr=net_config['cr'],
         pres=net_config['pres'],
         vres=net_config['vres']
@@ -160,7 +161,9 @@ def spvcnn_specialized(net_id, pretrained=True,  **kwargs):
         pres=net_config['pres'],
         vres=net_config['vres']
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+
     model.manual_select(net_config)
+    print("next model ", model)
     model = model.determinize()
 
     if pretrained:
