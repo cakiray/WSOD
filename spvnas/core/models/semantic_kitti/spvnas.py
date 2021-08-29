@@ -413,12 +413,7 @@ class SPVNAS(RandomNet):
                                                                      cr_bounds=self.up_cr_bounds,
                                                                      ks=2,
                                                                      stride=2)
-        """self.upsample[2]['transition'] = DynamicDeconvolutionBlock(self.output_channels[5],
-                                                                   self.output_channels[7],
-                                                                   cr_bounds=self.up_cr_bounds,
-                                                                   ks=2,
-                                                                  stride=2)
-        """
+
         self.point_transforms[1] = DynamicLinearBlock(self.output_channels[0],
                                                       self.output_channels[-2],
                                                      bias=True,
