@@ -55,6 +55,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
+
+    #normalize crm
+    mins = torch.min(outputs)
+    maxs = torch.max(outputs)
+    outputs = (outputs-mins)/(maxs-mins)
+    outputs[outputs==float('inf')] = 0.0
+    outputs[outputs==float('-inf')] = 0.0
+
     if torch.max(outputs) > peak_threshold:
 
         if inputs.F.grad is not None:
