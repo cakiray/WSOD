@@ -345,7 +345,7 @@ class SPVNAS(RandomNet):
                 module.manual_select(sample[name])
 
         cur_outputs_channels = copy.deepcopy(sample['output_channels'])
-    
+        cur_outputs_channels = self.output_channels
         # fix point branch
         self.point_transforms[0].manual_select(
             cur_outputs_channels[self.num_down_stages])
