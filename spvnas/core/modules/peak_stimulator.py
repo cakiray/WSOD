@@ -55,7 +55,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
-
+    """
     #normalize crm
     mins = torch.min(outputs)
     maxs = torch.max(outputs)
@@ -82,10 +82,12 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             prm = (prm-mins)/(maxs-mins)
             prm[prm==float('inf')] = 0.0
             prm[prm==float('-inf')] = 0.0
-        return peak_list, [prm], prm
+        return [peak_list[0]], [prm], prm
 
     else:
         return [], [], []
+    """
+    
     valid_peak_list = []
     peak_response_maps = []
     valid_peak_response_map = []
@@ -101,9 +103,10 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             #grad_output = torch.ones_like(outputs)
 
             # Set K nearest neighbors of peak as 1, backpropagate from a group of points
-            knn_list = utils.KNN(points=inputs, anchor=peak_list[idx,2], k=10)
+            k=1
+            knn_list = utils.KNN(points=inputs.F, anchor=peak_list[idx,2], k=k)
             for n in knn_list:
-                grad_output[0, 0, n] = 1
+                grad_output[peak_list[idx, 0], peak_list[idx, 1], n] = 1
 
             if inputs.F.grad is not None:
                 inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
