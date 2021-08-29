@@ -434,12 +434,10 @@ class SPVNAS(RandomNet):
                                                                      ks=2,
                                                                      stride=2)
 
-        self.point_transforms[1].manual_select(self.output_channels[-2])
-        self.point_transforms[2].manual_select(self.output_channels[-2])
+        self.point_transforms[0].manual_select(self.output_channels[3])
+        #self.point_transforms[2].manual_select(self.output_channels[-2])
 
     def forward(self, x):
-
-
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float()) # 5
         #x0 = initial_voxelize(z, self.pres, self.vres)
@@ -452,7 +450,7 @@ class SPVNAS(RandomNet):
         x1 = self.downsample[0](x1) # 28
         #x2 = self.downsample[1](x1) # 44
         #x3 = self.downsample[2](x2) # 76
-        x4 = self.downsample[2](x1) # 156
+        x4 = self.downsample[3](x1) # 156
 
         # point transform 32 to 256
         z1 = voxel_to_point(x4, z0) # 156
@@ -471,7 +469,7 @@ class SPVNAS(RandomNet):
         #y2 = self.upsample[1].feature(y2) # 72
         # point transform 256 to 128
         #z2 = voxel_to_point(y1, z1) # 72
-        z1.F = z1.F + self.point_transforms[1](z0.F) # 72
+        z1.F = z1.F + self.point_transforms[0](z0.F) # 72
 
         y3 = point_to_voxel(x4, z1) # 72
         y3.F = self.dropout(y3.F) # 72
