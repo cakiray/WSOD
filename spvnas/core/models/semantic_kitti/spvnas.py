@@ -408,120 +408,77 @@ class SPVNAS(RandomNet):
         return model
 
     def shrink(self):
-
-        base_channels = 32
-        output_channels_lb = [base_channels, 16, 32, 64, 128, 128, 64, 48, 48]
-        output_channels = [base_channels, 48, 96, 192, 384, 384, 192, 128, 128]
-        max_macro_depth = 2
-        max_micro_depth = 2
-        num_down_stages = len(output_channels) // 2 # 4
-
-        base_channels = self.base_channels
-        output_channels_lb = self.output_channels_lb
-        no_bn = False#kwargs.get('no_bn', False)
-
-        num_down_stages = self.num_down_stages
-
-        stages = []
-        for i in range(2, num_down_stages + 1,2): # 2,4
-            #for i in range(1, num_down_stages + 1):
-            stages.append(
-                nn.Sequential(
-                    OrderedDict([
-                        ('transition',
-                         DynamicConvolutionBlock(
-                             base_channels,
-                             base_channels,
-                             cr_bounds=self.trans_cr_bounds,
-                             ks=2,
-                             stride=2,
-                             dilation=1)),
-                        (
-                            'feature',
-                            RandomDepth(
-                                *[
-                                    DynamicResidualBlock(
-                                        base_channels,
-                                        output_channels[i],
-                                        cr_bounds=self.cr_bounds,
-                                        ks=3,
-                                        stride=1,
-                                        dilation=1),
-                                    DynamicResidualBlock(
-                                        output_channels[i],
-                                        output_channels[i],
-                                        cr_bounds=self.cr_bounds,
-                                        ks=3,
-                                        stride=1,
-                                        dilation=1)
-                                ],
-                                depth_min=macro_depth_constraint))
-                    ])))
-            base_channels = output_channels[i]
-
-        self.downsample = nn.ModuleList(stages)
-
-        # take care of weight sharing after concat!
-        upstages = []
-        for i in range(1, num_down_stages + 1):
-            new_base_channels = output_channels[num_down_stages + i]
-            upstages.append(
-                nn.Sequential(
-                    OrderedDict([
-                        ('transition',
-                         DynamicDeconvolutionBlock(base_channels,
-                                                   new_base_channels,
-                                                   cr_bounds=self.up_cr_bounds,
-                                                   ks=2,
-                                                   stride=2)),
-                        (
-                            'feature',
-                            RandomDepth(
-                                *[
-                                    DynamicResidualBlock(
-                                        output_channels[num_down_stages - i] +
-                                        new_base_channels,
-                                        new_base_channels,
-                                        cr_bounds=self.up_cr_bounds,
-                                        ks=3,
-                                        stride=1,
-                                        dilation=1),
-                                    DynamicResidualBlock(
-                                        new_base_channels,
-                                        new_base_channels,
-                                        cr_bounds=self.up_cr_bounds,
-                                        ks=3,
-                                        stride=1,
-                                        dilation=1)
-                                ],
-                                depth_min=macro_depth_constraint))
-                    ])))
-            base_channels = new_base_channels
-
-        self.upsample = nn.ModuleList(upstages)
-
-        self.point_transforms = nn.ModuleList([
-            DynamicLinearBlock(output_channels[0],
-                               output_channels[num_down_stages],
-                               bias=True,
-                               no_relu=False,
-                               no_bn=no_bn),
-            DynamicLinearBlock(output_channels[num_down_stages],
-                               output_channels[num_down_stages + 2],
-                               bias=True,
-                               no_relu=False,
-                               no_bn=no_bn),
-            DynamicLinearBlock(output_channels[num_down_stages + 2],
-                               output_channels[-1],
-                               bias=True,
-                               no_relu=False,
-                               no_bn=no_bn),
-        ])
-
-        self.classifier = DynamicLinear(output_channels[-1], num_classes)
-
+        self.downsample[3]['transition'] = DynamicDeconvolutionBlock(self.output_channels[1],
+                                                                     self.output_channels[3],
+                                                                     cr_bounds=self.up_cr_bounds,
+                                                                     ks=2,
+                                                                     stride=2)
+        self.upsample[2]['transition'] = DynamicDeconvolutionBlock(self.output_channels[5],
+                                                                   self.output_channels[7],
+                                                                   cr_bounds=self.up_cr_bounds,
+                                                                   ks=2,
+                                                                   stride=2)
+        self.point_transforms[1] = DynamicLinearBlock(self.output_channels[0],
+                                                      self.output_channels[-2],
+                                                     bias=True,
+                                                     no_relu=False,
+                                                     no_bn=False)
+        self.point_transforms[2] = DynamicLinearBlock(self.output_channels[-2],
+                                                      self.output_channels[-2],
+                                                      bias=True,
+                                                      no_relu=False,
+                                                      no_bn=False)
     def forward(self, x):
 
+
+        # x: SparseTensor z: PointTensor
+        z = PointTensor(x.F, x.C.float()) # 5
+        #x0 = initial_voxelize(z, self.pres, self.vres)
+        x0 = point_to_voxel(x, z) # 5
+
+        x0 = self.stem(x0) # 32
+        z0 = voxel_to_point(x0, z) # 32
+        z0.F = z0.F  #+ self.point_transforms[0](z.F) # 32
+        x1 = point_to_voxel(x0, z0) # 32
+        x1 = self.downsample[0](x1) # 28
+        #x2 = self.downsample[1](x1) # 44
+        #x3 = self.downsample[2](x2) # 76
+        x4 = self.downsample[3](x1) # 156
+
+        # point transform 32 to 256
+        z1 = voxel_to_point(x4, z0) # 156
+        #z1.F = z1.F + self.point_transforms[0](z0.F) # 156
+
+        #y1 = point_to_voxel(x4, z1) # 156
+        #y1.F = self.dropout(y1.F) # 156
+        #y1 = self.upsample[0].transition(y1) # 120
+        #y1 = torchsparse.cat([y1, x3]) # 120+76= 196
+
+        #y1 = self.upsample[0].feature(y1) # 140
+
+        #y2 = self.upsample[1].transition(y1) # 68
+        #y2 = torchsparse.cat([y2, x2]) # 68+44 = 112
+
+        #y2 = self.upsample[1].feature(y2) # 72
+        # point transform 256 to 128
+        #z2 = voxel_to_point(y1, z1) # 72
+        z1.F = z1.F + self.point_transforms[1](z1.F) # 72
+
+        y3 = point_to_voxel(x4, z1) # 72
+        y3.F = self.dropout(y3.F) # 72
+        y3 = self.upsample[2].transition(y3) # 32
+        y3 = torchsparse.cat([y3, x1]) # 32+28=60
+        y3 = self.upsample[2].feature(y3) # 60
+
+        y4 = self.upsample[3].transition(y3) # 44
+        y4 = torchsparse.cat([y4, x0]) # 44+32 = 76
+        y4 = self.upsample[3].feature(y4) # 48
+        z3 = voxel_to_point(y4, z1) # 48
+        z3.F = z3.F + self.point_transforms[2](z1.F) # 48
+
+        self.classifier.set_in_channel(z3.F.shape[-1])
+        out = self.classifier(z3.F) # 1
+        """
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float()) # 5
         #x0 = initial_voxelize(z, self.pres, self.vres)
@@ -569,7 +526,7 @@ class SPVNAS(RandomNet):
 
         self.classifier.set_in_channel(z3.F.shape[-1]) 
         out = self.classifier(z3.F) # 1
-
+        """
         out = self.relu(out)
         
         return out

@@ -69,7 +69,7 @@ def spvnas_specialized(net_id, pretrained=True,  **kwargs):
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
     model.manual_select(net_config)
     model = model.determinize()
-
+    model.shrink()
     if pretrained:
         
         init = torch.load(
