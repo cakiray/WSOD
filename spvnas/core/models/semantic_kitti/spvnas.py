@@ -413,11 +413,12 @@ class SPVNAS(RandomNet):
                                                                      cr_bounds=self.up_cr_bounds,
                                                                      ks=2,
                                                                      stride=2)
-        self.upsample[2]['transition'] = DynamicDeconvolutionBlock(self.output_channels[5],
+        """self.upsample[2]['transition'] = DynamicDeconvolutionBlock(self.output_channels[5],
                                                                    self.output_channels[7],
                                                                    cr_bounds=self.up_cr_bounds,
                                                                    ks=2,
-                                                                   stride=2)
+                                                                  stride=2)
+        """
         self.point_transforms[1] = DynamicLinearBlock(self.output_channels[0],
                                                       self.output_channels[-2],
                                                      bias=True,
@@ -443,7 +444,7 @@ class SPVNAS(RandomNet):
         x1 = self.downsample[0](x1) # 28
         #x2 = self.downsample[1](x1) # 44
         #x3 = self.downsample[2](x2) # 76
-        x4 = self.downsample[3](x1) # 156
+        x4 = self.downsample[2](x1) # 156
 
         # point transform 32 to 256
         z1 = voxel_to_point(x4, z0) # 156
@@ -462,7 +463,7 @@ class SPVNAS(RandomNet):
         #y2 = self.upsample[1].feature(y2) # 72
         # point transform 256 to 128
         #z2 = voxel_to_point(y1, z1) # 72
-        z1.F = z1.F + self.point_transforms[1](z1.F) # 72
+        z1.F = z1.F + self.point_transforms[1](z0.F) # 72
 
         y3 = point_to_voxel(x4, z1) # 72
         y3.F = self.dropout(y3.F) # 72
