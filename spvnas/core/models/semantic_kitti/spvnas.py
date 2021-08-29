@@ -406,6 +406,26 @@ class SPVNAS(RandomNet):
                 queue.append(module)
 
         return model
+    def shrink_(self):
+
+
+        self.point_transforms[1] = DynamicLinearBlock(self.output_channels[0],
+                                                      self.output_channels[-2],
+                                                      bias=True,
+                                                      no_relu=False,
+                                                      no_bn=False)
+        self.point_transforms[2] = DynamicLinearBlock(self.output_channels[-2],
+                                                      self.output_channels[-2],
+                                                      bias=True,
+                                                      no_relu=False,
+                                                      no_bn=False)
+        """
+        self.upsample[2]['transition'] = DynamicDeconvolutionBlock(self.output_channels[5],
+                                                                   self.output_channels[7],
+                                                                   cr_bounds=self.up_cr_bounds,
+                                                                   ks=2,
+                                                                  stride=2)
+        """
 
     def shrink(self):
         self.downsample[3].transition = DynamicDeconvolutionBlock(self.output_channels[1],
@@ -414,16 +434,9 @@ class SPVNAS(RandomNet):
                                                                      ks=2,
                                                                      stride=2)
 
-        self.point_transforms[1] = DynamicLinearBlock(self.output_channels[0],
-                                                      self.output_channels[-2],
-                                                     bias=True,
-                                                     no_relu=False,
-                                                     no_bn=False)
-        self.point_transforms[2] = DynamicLinearBlock(self.output_channels[-2],
-                                                      self.output_channels[-2],
-                                                      bias=True,
-                                                      no_relu=False,
-                                                      no_bn=False)
+        self.point_transforms[1].manual_select(self.output_channels[-2])
+        self.point_transforms[2].manual_select(self.output_channels[-2])
+
     def forward(self, x):
 
 
