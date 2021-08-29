@@ -125,6 +125,29 @@ def minkunet(net_id, pretrained=True, **kwargs):
         model.load_state_dict(init)
     return model
 
+def spvcnn_best(net_id, weights, pretrained=True, **kwargs):
+    url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvcnn/'
+    net_config = json.load(open(
+        download_url(url_base + net_id + '/net.config', model_dir='.torch/spvcnn/%s/' % net_id)
+    ))
+    input_channels = kwargs.get('input_channels', 4)
+    num_classes = kwargs.get('num_classes', net_config['num_classes'])
+    model = SPVCNN(
+        num_classes= num_classes,
+        input_channels=input_channels,
+        cr=net_config['cr'],
+        pres=net_config['pres'],
+        vres=net_config['vres']
+    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+
+    if pretrained:
+        dict_ = torch.load(weights)['model']
+        dict_correct_naming = dict()
+        for key in dict_:
+            dict_correct_naming[key.replace('module.','')] = dict_[key]
+        model.load_state_dict(dict_correct_naming)
+
+    return model
 
 def spvcnn(net_id, pretrained=True, **kwargs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvcnn/'

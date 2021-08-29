@@ -25,7 +25,7 @@ from core.callbacks import MeanIoU, MSE
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration 
 
-from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best, myspvcnn
+from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best, myspvcnn, spvcnn_best
 
 def main() -> None:
     dist.init()
@@ -71,7 +71,8 @@ def main() -> None:
     if 'spvnas' in configs.model.name:
         model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
     elif 'spvcnn' in configs.model.name:
-        model = myspvcnn(configs=configs, weights=args.weights, pretrained=True)
+        model = spvcnn_best(net_id=args.name, weights=args.weights, input_channels=configs.data.input_channel, num_classes=configs.data.num_classes)
+            #myspvcnn(configs=configs, weights=args.weights, pretrained=True)
     elif 'mink' in configs.model.name:
         model = minkunet(args.name)
     else:
