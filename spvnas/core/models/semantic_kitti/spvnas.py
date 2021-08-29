@@ -408,7 +408,7 @@ class SPVNAS(RandomNet):
         return model
 
     def shrink(self):
-        self.downsample[3]['transition'] = DynamicDeconvolutionBlock(self.output_channels[1],
+        self.downsample[3].transition = DynamicDeconvolutionBlock(self.output_channels[1],
                                                                      self.output_channels[3],
                                                                      cr_bounds=self.up_cr_bounds,
                                                                      ks=2,
