@@ -106,7 +106,7 @@ class SPVNAS_CNN(nn.Module):
             BasicConvolutionBlock(cs[0], cs[1], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[1], cs[2], cs[3], ks=3, stride=1, dilation=1),
         )
-
+        """
         self.stage2 = nn.Sequential(
             BasicConvolutionBlock(cs[3], cs[4], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[4], cs[5], cs[6], ks=3, stride=1, dilation=1),
@@ -117,12 +117,12 @@ class SPVNAS_CNN(nn.Module):
             BasicConvolutionBlock(cs[6], cs[7], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[7], cs[8], cs[9], ks=3, stride=1, dilation=1),
         )
-
+        """
         self.stage4 = nn.Sequential(
             BasicConvolutionBlock(cs[9], cs[10], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[10], cs[11], cs[12], ks=3, stride=1, dilation=1),
         )
-
+        """
         self.up1 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[12], cs[13], ks=2, stride=2),
             nn.Sequential(
@@ -138,7 +138,7 @@ class SPVNAS_CNN(nn.Module):
                               dilation=1),
             )
         ])
-
+        """
         self.up3 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[18], cs[19], ks=2, stride=2),
             nn.Sequential(
