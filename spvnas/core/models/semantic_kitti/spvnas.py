@@ -347,8 +347,13 @@ class SPVNAS(RandomNet):
         cur_outputs_channels = copy.deepcopy(sample['output_channels'])
         cur_outputs_channels = self.output_channels
         # fix point branch
-        self.point_transforms[0].manual_select(
-            cur_outputs_channels[self.num_down_stages])
+        #self.point_transforms[0].manual_select(
+            #cur_outputs_channels[self.num_down_stages])
+
+        #for shrinking
+        self.point_transforms[0].manual_select(self.output_channels[3])
+        # for shrinking end
+
         self.point_transforms[1].manual_select(
             cur_outputs_channels[self.num_down_stages + 2])
         self.point_transforms[2].manual_select(cur_outputs_channels[-1])
@@ -357,6 +362,11 @@ class SPVNAS(RandomNet):
             for j in range(self.downsample[i].feature.depth):
                 self.downsample[i].feature.layers[j].constrain_output_channel(
                     cur_outputs_channels[i + 1])
+        #for shrinking
+        for j in range(self.downsample[i].feature.depth):
+            self.downsample[0].feature.layers[j].constrain_output_channel(self.output_channels[3])
+        # for shrinking end
+
 
         for i in range(len(self.upsample)):
             trans_output_channels = self.upsample[i].transition.status()
