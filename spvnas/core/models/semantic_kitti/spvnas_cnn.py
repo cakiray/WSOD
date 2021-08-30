@@ -60,7 +60,7 @@ class ResidualBlock(nn.Module):
                         midc,
                         kernel_size=ks,
                         dilation=dilation,
-                        stride=stride), spnn.BatchNorm(outc),
+                        stride=stride), spnn.BatchNorm(midc),
             spnn.ReLU(True),
             spnn.Conv3d(midc,
                         outc,
