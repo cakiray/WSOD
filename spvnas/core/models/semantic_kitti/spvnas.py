@@ -338,7 +338,6 @@ class SPVNAS(RandomNet):
 
         return sample
 
-    
     def manual_select(self, sample):
         for name, module in self.named_random_modules():
             if sample[name] is not None:
@@ -366,14 +365,8 @@ class SPVNAS(RandomNet):
         #for j in range(self.downsample[0].feature.depth):
         #    self.downsample[0].feature.layers[j].constrain_output_channel(self.output_channels[3])
 
-        for j in range(self.downsample[3].feature.depth):
-            self.downsample[3].feature.layers[j].constrain_in_channel(self.output_channels[1])
-        for j in range(self.downsample[3].feature.depth):
-            self.downsample[3].feature.layers[j].constrain_output_channel(self.output_channels[3])
-        for j in range(self.upsample[3].transition.depth):
-            self.upsample[3].transition.layers[j].constrain_in_channel(self.output_channels[4])
-
         # for shrinking end
+
         for i in range(len(self.upsample)):
             trans_output_channels = self.upsample[i].transition.status()
             for j in range(self.upsample[i].feature.depth):
@@ -382,15 +375,11 @@ class SPVNAS(RandomNet):
                 # special case: 1st layer for 1st residual block (because of concat)
                 if j == 0:
                     cons = list(range(trans_output_channels)) + list(
-                        range(
-                            self.output_channels[len(self.downsample) + i + 1],
-                            self.output_channels[len(self.downsample) + i + 1]
-                            + cur_outputs_channels[len(self.downsample) - 1 -
-                                                   i]))
-                    self.upsample[i].feature.layers[j].net.layers[
-                        0].constrain_in_channel(cons)
-                    self.upsample[i].feature.layers[
-                        j].downsample.constrain_in_channel(cons)
+                            range(self.output_channels[len(self.downsample) + i + 1],
+                                self.output_channels[len(self.downsample) + i + 1]
+                                + cur_outputs_channels[len(self.downsample) - 1 - i]))
+                    self.upsample[i].feature.layers[j].net.layers[0].constrain_in_channel(cons)
+                    self.upsample[i].feature.layers[j].downsample.constrain_in_channel(cons)
 
         self.cur_outputs_channels = cur_outputs_channels
 
