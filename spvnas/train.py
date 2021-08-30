@@ -89,6 +89,7 @@ def main() -> None:
         model.train()
     elif 'spvnas_cnn'== configs.model.name:
         model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        model.shrink()
         model.train()
     else:
         raise NotImplementedError
