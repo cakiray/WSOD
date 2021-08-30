@@ -180,6 +180,40 @@ class SPVNAS_CNN(nn.Module):
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
 
+    def shrink(self):
+        cs= self.cs
+        self.stage4 = nn.Sequential(
+            BasicConvolutionBlock(cs[3], cs[10], ks=2, stride=2, dilation=1),
+            ResidualBlock(cs[10], cs[11], cs[12], ks=3, stride=1, dilation=1),
+        )
+
+        self.up3 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[12], cs[19], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[19] + cs[3], cs[20], cs[21], ks=3, stride=1,
+                              dilation=1),
+            )
+        ])
+
+        self.point_transforms = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(cs[0], cs[12]),
+                nn.BatchNorm1d(cs[12]),
+                nn.ReLU(True),
+            ),
+            nn.Sequential(
+                nn.Linear(cs[12], cs[21]),
+                nn.BatchNorm1d(cs[21]),
+                nn.ReLU(True),
+            ),
+            nn.Sequential(
+                nn.Linear(cs[12], cs[24]),
+                nn.BatchNorm1d(cs[24]),
+                nn.ReLU(True),
+            )
+        ])
+
+
     @staticmethod
     def median_filter(input):
         batch_size, num_channels, n = input.size()
@@ -233,38 +267,7 @@ class SPVNAS_CNN(nn.Module):
         # Change last layer to trainable
         self.classifier = nn.Sequential(nn.Linear(self.cs[8], num_classes))
 
-    def forward(self, x):
-        """
-        # x: SparseTensor z: PointTensor
-        z = PointTensor(x.F, x.C.float()) # 4
-        x0 = initial_voxelize(z, self.pres, self.vres) # 4
-        x0 = self.stem(x0) # 32
-        z0 = voxel_to_point(x0, z, nearest=False) # 32, 4 x 32
-        z0.F = z0.F
-
-        x1 = point_to_voxel(x0, z0) # 32
-        x1 = self.stage1(x1) # 64
-        x2 = self.stage2(x1) # 128
-
-        z1 = voxel_to_point(x2, z0) # 64, 32 x 64
-        z1.F = z1.F + self.point_transforms[0](z0.F) # 128
-
-        y1 = point_to_voxel(x2, z1) # 128
-        y1.F = self.dropout(y1.F)
-        y1 = self.up1[0](y1) # 64
-        y1 = torchsparse.cat([y1, x1]) # 128
-        y1 = self.up1[1](y1) # 64
-
-        y2 = self.up2[0](y1) # 32
-        y2 = torchsparse.cat([y2, x0]) # 32+32 x
-        y2 = self.up2[1](y2) # 32
-        z2 = voxel_to_point(y2, z0) # 32
-        z2.F = z2.F + self.point_transforms[1](z1.F) # 32
-
-        out = self.classifier(z2.F)
-        out = self.relu(out)
-
-        """
+    def forward_(self, x):
 
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float())
@@ -306,9 +309,49 @@ class SPVNAS_CNN(nn.Module):
         z3.F = z3.F + self.point_transforms[2](z2.F)
         out = self.classifier(z3.F)
         out = self.relu(out)
-
-
         return out
 
 
 
+    def forward(self, x):
+
+        # x: SparseTensor z: PointTensor
+        z = PointTensor(x.F, x.C.float())
+        x0 = initial_voxelize(z, self.pres, self.vres)
+        x0 = self.stem(x0) # 32 x 32
+        z0 = voxel_to_point(x0, z, nearest=False) # 32
+        z0.F = z0.F
+
+        x1 = point_to_voxel(x0, z0) # 32
+        x1 = self.stage1(x1) # 64
+        #x2 = self.stage2(x1) # 128
+        #x3 = self.stage3(x2)
+        x4 = self.stage4(x1)
+        z1 = voxel_to_point(x4, z0)
+        z1.F = z1.F + self.point_transforms[0](z0.F)
+        """
+        y1 = point_to_voxel(x4, z1)
+        y1.F = self.dropout(y1.F)
+        y1 = self.up1[0](y1)
+        y1 = torchsparse.cat([y1, x3])
+        y1 = self.up1[1](y1)
+
+        y2 = self.up2[0](y1)
+        y2 = torchsparse.cat([y2, x2])
+        y2 = self.up2[1](y2)
+        z2 = voxel_to_point(y2, z1)
+        z2.F = z2.F + self.point_transforms[1](z1.F)
+        """
+        y3 = point_to_voxel(x4, z1)
+        y3.F = self.dropout(y3.F)
+        y3 = self.up3[0](y3)
+        y3 = torchsparse.cat([y3, x1])
+        y3 = self.up3[1](y3)
+
+        y4 = self.up4[0](y3)
+        y4 = torchsparse.cat([y4, x0])
+        y4 = self.up4[1](y4)
+        z3 = voxel_to_point(y4, z1)
+        z3.F = z3.F + self.point_transforms[2](z1.F)
+        out = self.classifier(z3.F)
+        out = self.relu(out)
