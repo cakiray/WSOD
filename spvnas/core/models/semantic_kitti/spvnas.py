@@ -365,12 +365,15 @@ class SPVNAS(RandomNet):
         #for shrinking
         #for j in range(self.downsample[0].feature.depth):
         #    self.downsample[0].feature.layers[j].constrain_output_channel(self.output_channels[3])
-        # for shrinking end
-        for j in range(self.downsample[2].feature.depth):
-            self.downsample[2].feature.layers[j].constrain_output_channel(self.output_channels[1])
+
+        for j in range(self.downsample[3].feature.depth):
+            self.downsample[3].feature.layers[j].constrain_in_channel(self.output_channels[1])
         for j in range(self.downsample[3].feature.depth):
             self.downsample[3].feature.layers[j].constrain_output_channel(self.output_channels[3])
+        for j in range(self.upsample[3].transition.depth):
+            self.upsample[3].transition.layers[j].constrain_in_channel(self.output_channels[4])
 
+        # for shrinking end
         for i in range(len(self.upsample)):
             trans_output_channels = self.upsample[i].transition.status()
             for j in range(self.upsample[i].feature.depth):
