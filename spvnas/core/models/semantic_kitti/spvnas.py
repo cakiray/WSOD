@@ -438,11 +438,15 @@ class SPVNAS(RandomNet):
         """
 
     def shrink(self):
+        """
         self.downsample[3].transition = DynamicDeconvolutionBlock(self.output_channels[1],
                                                                      self.output_channels[3],
                                                                      cr_bounds=self.up_cr_bounds,
                                                                      ks=2,
                                                                      stride=2)
+        """
+        for j in range(self.downsample[2].feature.depth):
+            self.downsample[2].feature.layers[j].constrain_output_channel(self.output_channels[1])
         for j in range(self.downsample[3].feature.depth):
             self.downsample[3].feature.layers[j].constrain_output_channel(self.output_channels[3])
         #self.point_transforms[0].manual_select(self.output_channels[3])
