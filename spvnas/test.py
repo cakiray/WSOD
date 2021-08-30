@@ -25,7 +25,7 @@ from core.callbacks import MeanIoU, MSE
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration 
 
-from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best, myspvcnn, spvcnn_best
+from model_zoo import spvnas_specialized, minkunet, spvcnn, spvnas_best, myspvcnn, spvcnn_best, spvnas_cnn
 
 def main() -> None:
     dist.init()
@@ -68,13 +68,14 @@ def main() -> None:
             collate_fn=dataset[split].collate_fn)
 
 
-    if 'spvnas' in configs.model.name:
+    if 'spvnas' == configs.model.name:
         model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
-    elif 'spvcnn' in configs.model.name:
+    elif 'spvcnn' == configs.model.name:
         model = spvcnn_best(net_id=args.name, weights=args.weights, input_channels=configs.data.input_channel, num_classes=configs.data.num_classes)
             #myspvcnn(configs=configs, weights=args.weights, pretrained=True)
-    elif 'mink' in configs.model.name:
-        model = minkunet(args.name)
+    elif 'spvnas_cnn' == configs.model.name:
+        model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, weights=args.weights, pretrained=True)
+
     else:
         raise NotImplementedError
 
