@@ -363,7 +363,7 @@ class SPVNAS(RandomNet):
                 self.downsample[i].feature.layers[j].constrain_output_channel(
                     cur_outputs_channels[i + 1])
         #for shrinking
-        for j in range(self.downsample[i].feature.depth):
+        for j in range(self.downsample[0].feature.depth):
             self.downsample[0].feature.layers[j].constrain_output_channel(self.output_channels[3])
         # for shrinking end
 
@@ -457,6 +457,7 @@ class SPVNAS(RandomNet):
         z0 = voxel_to_point(x0, z) # 32
         z0.F = z0.F  #+ self.point_transforms[0](z.F) # 32
         x1 = point_to_voxel(x0, z0) # 32
+        print(x1.F.shape)
         x1 = self.downsample[0](x1) # 28
         #x2 = self.downsample[1](x1) # 44
         #x3 = self.downsample[2](x2) # 76
