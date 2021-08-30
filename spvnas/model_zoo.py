@@ -16,6 +16,7 @@ from torchpack import distributed as dist
 from core.models.semantic_kitti.spvnas import SPVNAS
 from core.models.semantic_kitti.minkunet import MinkUNet
 from core.models.semantic_kitti.spvcnn import SPVCNN
+from core.models.semantic_kitti.spvnas_cnn import SPVNAS_CNN
 
 
 __all__ = ['spvnas_specialized', 'minkunet', 'spvcnn']
@@ -53,6 +54,24 @@ def spvnas_best(net_id, weights, configs, **kwargs):
     model.load_state_dict(dict_correct_naming)
     return model
 
+def spvnas_cnn(pretrained=False, **kwargs):
+
+    input_channels = kwargs.get('input_channels', 5)
+    num_classes = kwargs.get('num_classes', 1)
+    model = SPVNAS_CNN(
+        num_classes=num_classes,
+        input_channels = input_channels,
+        macro_depth_constraint=1,
+    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+
+    if pretrained:
+        dict_ = torch.load(kwargs['weights'])['model']
+        dict_correct_naming = dict()
+        for key in dict_:
+            dict_correct_naming[key.replace('module.','')] = dict_[key]
+        model.load_state_dict(dict_correct_naming)
+
+    return model
 
 def spvnas_specialized(net_id, pretrained=True,  **kwargs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'

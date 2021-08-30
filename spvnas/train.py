@@ -22,7 +22,7 @@ from torchpack.utils.logging import logger
 
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE, Shrinkage, MTE
-from model_zoo import spvnas_specialized, spvcnn_specialized, myspvcnn, spvcnn
+from model_zoo import spvnas_cnn, spvcnn, spvnas_specialized
 from core import builder, utils
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration
@@ -79,13 +79,16 @@ def main() -> None:
             collate_fn=dataset[split].collate_fn)
 
     #model = builder.make_model()
-    if 'spvnas' in configs.model.name:
+    if 'spvnas' == configs.model.name:
         model = spvnas_specialized(args.name, input_channels = configs.data.input_channels , pretrained=False)
         model.train()
         model = model.change_last_layer(configs.data.num_classes)
-    elif 'spvcnn' in configs.model.name:
+    elif 'spvcnn'== configs.model.name:
         #model = myspvcnn(configs=configs, pretrained=False)
-        model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False,)
+        model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        model.train()
+    elif 'spvnas_cnn'== configs.model.name:
+        model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         model.train()
     else:
         raise NotImplementedError
