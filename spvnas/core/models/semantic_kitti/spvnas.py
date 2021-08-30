@@ -29,8 +29,9 @@ class SPVNAS(RandomNet):
     
     # [base_channels, 32, 64, 128, 256, 256, 128, 96, 96]
     output_channels_lb = [base_channels, 16, 32, 64, 128, 128, 64, 48, 48]
-    output_channels = [base_channels, 48, 96, 192, 384, 384, 192, 128, 128]
-    #output_channels = [base_channels, 48, 48, 96, 192, 192, 96, 48, 48]
+    #output_channels = [base_channels, 48, 96, 192, 384, 384, 192, 128, 128]
+    base_channels = 16
+    output_channels = [base_channels, 32, 64, 128, 256, 256, 128, 32, 32]
 
     max_macro_depth = 2
     max_micro_depth = 2
@@ -346,11 +347,11 @@ class SPVNAS(RandomNet):
         cur_outputs_channels = copy.deepcopy(sample['output_channels'])
         cur_outputs_channels = self.output_channels
         # fix point branch
-        #self.point_transforms[0].manual_select(
-            #cur_outputs_channels[self.num_down_stages])
+        self.point_transforms[0].manual_select(
+            cur_outputs_channels[self.num_down_stages])
 
         #for shrinking
-        self.point_transforms[0].manual_select(self.output_channels[4])
+        #self.point_transforms[0].manual_select(self.output_channels[4])
         # for shrinking end
 
         self.point_transforms[1].manual_select(
@@ -447,6 +448,7 @@ class SPVNAS(RandomNet):
         #self.point_transforms[2].manual_select(self.output_channels[-2])
 
     def forward(self, x):
+        """
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float()) # 5
         #x0 = initial_voxelize(z, self.pres, self.vres)
@@ -496,6 +498,7 @@ class SPVNAS(RandomNet):
         self.classifier.set_in_channel(z3.F.shape[-1])
         out = self.classifier(z3.F) # 1
         """
+
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float()) # 5
         #x0 = initial_voxelize(z, self.pres, self.vres)
@@ -543,7 +546,7 @@ class SPVNAS(RandomNet):
 
         self.classifier.set_in_channel(z3.F.shape[-1]) 
         out = self.classifier(z3.F) # 1
-        """
+
         out = self.relu(out)
         
         return out
