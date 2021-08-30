@@ -53,16 +53,16 @@ class BasicDeconvolutionBlock(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, inc, outc, ks=3, stride=1, dilation=1):
+    def __init__(self, inc, midc, outc, ks=3, stride=1, dilation=1):
         super().__init__()
         self.net = nn.Sequential(
             spnn.Conv3d(inc,
-                        outc,
+                        midc,
                         kernel_size=ks,
                         dilation=dilation,
                         stride=stride), spnn.BatchNorm(outc),
             spnn.ReLU(True),
-            spnn.Conv3d(outc,
+            spnn.Conv3d(midc,
                         outc,
                         kernel_size=ks,
                         dilation=dilation,
@@ -88,7 +88,7 @@ class SPVNAS_CNN(nn.Module):
         cr = kwargs.get('cr', 1.0)
         input_channels = kwargs.get('input_channels', 5)
         cs = [32, 32, 64, 128, 256, 256, 128, 96, 96]
-        cs = [32,16,28,24,44,52,76,108,156,120,140,68,72,32,60,44,48]
+        cs = [32,16,20,28,24,40,44,52,72,76,108,108,156,120,112,140,68,52,72,32,40,60,44,40,48]
         #cs = [32, 64, 128, 64, 32]
         cs = [int(cr * x) for x in cs]
         self.cs = cs
@@ -104,82 +104,74 @@ class SPVNAS_CNN(nn.Module):
 
         self.stage1 = nn.Sequential(
             BasicConvolutionBlock(cs[0], cs[1], ks=2, stride=2, dilation=1),
-            ResidualBlock(cs[1], cs[2], ks=3, stride=1, dilation=1),
-            ResidualBlock(cs[2], cs[2], ks=3, stride=1, dilation=1),
+            ResidualBlock(cs[1], cs[2], cs[3], ks=3, stride=1, dilation=1),
         )
 
         self.stage2 = nn.Sequential(
-            BasicConvolutionBlock(cs[2], cs[3], ks=2, stride=2, dilation=1),
-            ResidualBlock(cs[3], cs[4], ks=3, stride=1, dilation=1),
-            ResidualBlock(cs[4], cs[4], ks=3, stride=1, dilation=1),
+            BasicConvolutionBlock(cs[3], cs[4], ks=2, stride=2, dilation=1),
+            ResidualBlock(cs[4], cs[5], cs[6], ks=3, stride=1, dilation=1),
         )
 
 
         self.stage3 = nn.Sequential(
-            BasicConvolutionBlock(cs[4], cs[5], ks=2, stride=2, dilation=1),
-            ResidualBlock(cs[5], cs[6], ks=3, stride=1, dilation=1),
-            ResidualBlock(cs[6], cs[6], ks=3, stride=1, dilation=1),
+            BasicConvolutionBlock(cs[6], cs[7], ks=2, stride=2, dilation=1),
+            ResidualBlock(cs[7], cs[8], cs[9], ks=3, stride=1, dilation=1),
         )
 
         self.stage4 = nn.Sequential(
-            BasicConvolutionBlock(cs[6], cs[7], ks=2, stride=2, dilation=1),
-            ResidualBlock(cs[7], cs[8], ks=3, stride=1, dilation=1),
-            ResidualBlock(cs[8], cs[8], ks=3, stride=1, dilation=1),
+            BasicConvolutionBlock(cs[9], cs[10], ks=2, stride=2, dilation=1),
+            ResidualBlock(cs[10], cs[11], cs[12], ks=3, stride=1, dilation=1),
         )
 
         self.up1 = nn.ModuleList([
-            BasicDeconvolutionBlock(cs[8], cs[9], ks=2, stride=2),
+            BasicDeconvolutionBlock(cs[12], cs[13], ks=2, stride=2),
             nn.Sequential(
-                ResidualBlock(cs[9] + cs[6], cs[9], ks=3, stride=1,
+                ResidualBlock(cs[13] + cs[9], cs[14], cs[15], ks=3, stride=1,
                               dilation=1),
-                ResidualBlock(cs[9], cs[10], ks=3, stride=1, dilation=1),
             )]
         )
 
         self.up2 = nn.ModuleList([
-            BasicDeconvolutionBlock(cs[10], cs[11], ks=2, stride=2),
+            BasicDeconvolutionBlock(cs[15], cs[16], ks=2, stride=2),
             nn.Sequential(
-                ResidualBlock(cs[11] + cs[4], cs[11], ks=3, stride=1,
+                ResidualBlock(cs[16] + cs[6], cs[17], cs[18], ks=3, stride=1,
                               dilation=1),
-                ResidualBlock(cs[11], cs[12], ks=3, stride=1, dilation=1),
             )
         ])
 
         self.up3 = nn.ModuleList([
-            BasicDeconvolutionBlock(cs[12], cs[13], ks=2, stride=2),
+            BasicDeconvolutionBlock(cs[18], cs[19], ks=2, stride=2),
             nn.Sequential(
-                ResidualBlock(cs[13] + cs[2], cs[13], ks=3, stride=1,
+                ResidualBlock(cs[19] + cs[3], cs[20], cs[21], ks=3, stride=1,
                               dilation=1),
-                ResidualBlock(cs[13], cs[14], ks=3, stride=1, dilation=1),
             )
         ])
 
         self.up4 = nn.ModuleList([
-            BasicDeconvolutionBlock(cs[14], cs[15], ks=2, stride=2),
+            BasicDeconvolutionBlock(cs[21], cs[22], ks=2, stride=2),
             nn.Sequential(
-                ResidualBlock(cs[15] + cs[0], cs[15], ks=3, stride=1,
+                ResidualBlock(cs[22] + cs[0], cs[23], cs[24], ks=3, stride=1,
                               dilation=1),
-                ResidualBlock(cs[15], cs[16], ks=3, stride=1, dilation=1),
             )
         ])
 
-        self.classifier = nn.Sequential(nn.Linear(cs[16],
+        self.classifier = nn.Sequential(nn.Linear(cs[24],
                                                   kwargs['num_classes']))
 
         self.point_transforms = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(cs[0], cs[8]),
-                nn.BatchNorm1d(cs[8]),
-                nn.ReLU(True),
-            ),
-            nn.Sequential(
-                nn.Linear(cs[8], cs[12]),
+                nn.Linear(cs[0], cs[12]),
                 nn.BatchNorm1d(cs[12]),
                 nn.ReLU(True),
             ),
             nn.Sequential(
-                nn.Linear(cs[12], cs[16]),
-                nn.BatchNorm1d(cs[16]),
+                nn.Linear(cs[12], cs[18]),
+                nn.BatchNorm1d(cs[18]),
+                nn.ReLU(True),
+            ),
+            nn.Sequential(
+                nn.Linear(cs[18], cs[24]),
+                nn.BatchNorm1d(cs[24]),
                 nn.ReLU(True),
             )
         ])
