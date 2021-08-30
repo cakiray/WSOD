@@ -362,9 +362,8 @@ class SPVNAS(RandomNet):
                 self.downsample[i].feature.layers[j].constrain_output_channel(
                     cur_outputs_channels[i + 1])
         #for shrinking
-        #for j in range(self.downsample[0].feature.depth):
-        #    self.downsample[0].feature.layers[j].constrain_output_channel(self.output_channels[3])
-
+        for j in range(self.downsample[3].feature.depth):
+            self.downsample[3].feature.layers[j].constrain_output_channel(self.output_channels[3])
         # for shrinking end
 
         for i in range(len(self.upsample)):
