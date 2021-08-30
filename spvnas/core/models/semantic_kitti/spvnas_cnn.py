@@ -355,3 +355,5 @@ class SPVNAS_CNN(nn.Module):
         z3.F = z3.F + self.point_transforms[2](z1.F)
         out = self.classifier(z3.F)
         out = self.relu(out)
+
+        return out
