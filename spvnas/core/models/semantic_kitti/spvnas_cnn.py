@@ -107,7 +107,7 @@ class SPVNAS_CNN(nn.Module):
             BasicConvolutionBlock(cs[0], cs[1], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[1], cs[2], cs[3], ks=3, stride=1, dilation=1),
         )
-        """
+
         self.stage2 = nn.Sequential(
             BasicConvolutionBlock(cs[3], cs[4], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[4], cs[5], cs[6], ks=3, stride=1, dilation=1),
@@ -118,12 +118,12 @@ class SPVNAS_CNN(nn.Module):
             BasicConvolutionBlock(cs[6], cs[7], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[7], cs[8], cs[9], ks=3, stride=1, dilation=1),
         )
-        """
+
         self.stage4 = nn.Sequential(
             BasicConvolutionBlock(cs[9], cs[10], ks=2, stride=2, dilation=1),
             ResidualBlock(cs[10], cs[11], cs[12], ks=3, stride=1, dilation=1),
         )
-        """
+
         self.up1 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[12], cs[13], ks=2, stride=2),
             nn.Sequential(
@@ -139,7 +139,7 @@ class SPVNAS_CNN(nn.Module):
                               dilation=1),
             )
         ])
-        """
+
         self.up3 = nn.ModuleList([
             BasicDeconvolutionBlock(cs[18], cs[19], ks=2, stride=2),
             nn.Sequential(
@@ -180,6 +180,40 @@ class SPVNAS_CNN(nn.Module):
         self.relu = nn.LeakyReLU(negative_slope=0.1)
         self.weight_initialization()
         self.dropout = nn.Dropout(0.3, True)
+
+    def remove_skipconnection(self):
+        cs= self.cs
+        self.up1 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[12], cs[13], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[13] , cs[14], cs[15], ks=3, stride=1,
+                              dilation=1),
+            )]
+        )
+
+        self.up2 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[15], cs[16], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[16] , cs[17], cs[18], ks=3, stride=1,
+                              dilation=1),
+            )
+        ])
+
+        self.up3 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[18], cs[19], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[19] , cs[20], cs[21], ks=3, stride=1,
+                              dilation=1),
+            )
+        ])
+
+        self.up4 = nn.ModuleList([
+            BasicDeconvolutionBlock(cs[21], cs[22], ks=2, stride=2),
+            nn.Sequential(
+                ResidualBlock(cs[22] , cs[23], cs[24], ks=3, stride=1,
+                              dilation=1),
+            )
+        ])
 
     def shrink(self):
         cs= self.cs
@@ -268,7 +302,7 @@ class SPVNAS_CNN(nn.Module):
         # Change last layer to trainable
         self.classifier = nn.Sequential(nn.Linear(self.cs[8], num_classes))
 
-    def forward_(self, x):
+    def forward(self, x):
 
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float())
@@ -314,8 +348,8 @@ class SPVNAS_CNN(nn.Module):
 
 
 
-    def forward(self, x):
-
+    def forward_(self, x):
+        #forward with shrinking
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float())
         x0 = initial_voxelize(z, self.pres, self.vres)
@@ -357,4 +391,48 @@ class SPVNAS_CNN(nn.Module):
         out = self.classifier(z3.F)
         out = self.relu(out)
 
+        return out
+
+    def forward__(self,x):
+        #forward without skip connections
+        # x: SparseTensor z: PointTensor
+        z = PointTensor(x.F, x.C.float())
+        x0 = initial_voxelize(z, self.pres, self.vres)
+        x0 = self.stem(x0) # 32 x 32
+        z0 = voxel_to_point(x0, z, nearest=False) # 32
+        z0.F = z0.F
+
+        x1 = point_to_voxel(x0, z0) # 32
+        x1 = self.stage1(x1) # 64
+        x2 = self.stage2(x1) # 128
+        x3 = self.stage3(x2)
+        x4 = self.stage4(x3)
+        z1 = voxel_to_point(x4, z0)
+        z1.F = z1.F + self.point_transforms[0](z0.F)
+
+        y1 = point_to_voxel(x4, z1)
+        y1.F = self.dropout(y1.F)
+        y1 = self.up1[0](y1)
+        #y1 = torchsparse.cat([y1, x3])
+        y1 = self.up1[1](y1)
+
+        y2 = self.up2[0](y1)
+        #y2 = torchsparse.cat([y2, x2])
+        y2 = self.up2[1](y2)
+        z2 = voxel_to_point(y2, z1)
+        z2.F = z2.F + self.point_transforms[1](z1.F)
+
+        y3 = point_to_voxel(y2, z2)
+        y3.F = self.dropout(y3.F)
+        y3 = self.up3[0](y3)
+        #y3 = torchsparse.cat([y3, x1])
+        y3 = self.up3[1](y3)
+
+        y4 = self.up4[0](y3)
+        #y4 = torchsparse.cat([y4, x0])
+        y4 = self.up4[1](y4)
+        z3 = voxel_to_point(y4, z2)
+        z3.F = z3.F + self.point_transforms[2](z2.F)
+        out = self.classifier(z3.F)
+        out = self.relu(out)
         return out
