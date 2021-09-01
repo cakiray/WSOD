@@ -356,3 +356,10 @@ def KNN(points, anchor, k=10):
     [k, idxs, _] = pcd_tree.search_knn_vector_3d(pcd.points[anchor], k)
 
     return idxs
+
+def save_in_kitti_format(file_id, peak_responses, calibs):
+    calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
+    calibs = Calibration( calib_file )
+    #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
+    label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
+    labels = utils.read_labels( label_file)
