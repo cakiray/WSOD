@@ -23,7 +23,7 @@ dataset:
 num_epochs: 5
 prm:
   win_size: 5
-  peak_threshold: 0.25
+  peak_threshold: 0.15
 
 batch_size: 8
 batch_norm: true
@@ -31,21 +31,21 @@ workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
-tfeventname: /lr0,1-bs8-r2-train-gs-shrinkage
+tfeventname: /experiment
 
-outputs: /data/Ezgi/dummy
+outputs: /data/Ezgi/spvnas_cnn_wd-6-lr001-e5
 
 model:
-  name: spvnas
+  name: spvnas_cnn
   no_bn: false
 
 criterion:
-  name: shrinkage
+  name: mse
 
 optimizer:
   name: adam
-  lr: 1.0e-1
-  weight_decay: 1.0e-4
+  lr: 1.0e-2
+  weight_decay: 1.0e-6
   momentum: 0.9
   nesterov: true
 

@@ -113,11 +113,12 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
 
             # Calculate peak response maps backwarding the output
             outputs.backward(grad_output, retain_graph=True)
-
+        
             grad = inputs.F.grad # N x input_channel_num
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
             print("prm nonzero ", (prm!=0.0).sum(0))
+            
             prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
             prm = np.asarray(prm)
             #normalize gradient 0 <= prm <= 1
