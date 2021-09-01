@@ -71,7 +71,7 @@ def main() -> None:
     if 'spvnas' == configs.model.name:
         model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
     elif 'spvcnn' == configs.model.name:
-        model = spvcnn_best(net_id=args.name, weights=args.weights, input_channels=configs.data.input_channel, num_classes=configs.data.num_classes)
+        model = spvcnn_best(net_id=args.name, weights=args.weights, input_channels=configs.data.input_channels, num_classes=configs.data.num_classes)
             #myspvcnn(configs=configs, weights=args.weights, pretrained=True)
     elif 'spvnas_cnn' == configs.model.name:
         model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, weights=args.weights, pretrained=True)
@@ -134,7 +134,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if n < 10:
+        if n < 3:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -186,7 +186,7 @@ def main() -> None:
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
                 
                 np.save(os.path.join(configs.outputs, filename.replace('.bin', '_prm.npy')), peak_response_maps_sum)
-                np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
+                #np.save(os.path.join(configs.outputs, filename.replace('.bin', '_gt.npy')), targets.cpu())
             
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))

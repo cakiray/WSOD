@@ -181,7 +181,7 @@ def main() -> None:
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             
             print("\ncurrent file: ", filename) 
-
+            exit(0)
             """
             out = outputs.cpu() 
             inp_pc = inputs.F.cpu() # input point cloud 
