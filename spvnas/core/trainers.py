@@ -13,7 +13,8 @@ __all__ = ['SemanticKITTITrainer']
 class SemanticKITTITrainer(Trainer):
     def __init__(self, model: nn.Module, criterion: Callable,
                  optimizer: Optimizer, scheduler: Scheduler,
-                 num_workers: int, seed: int, out_save_dir: str) -> None:
+                 num_workers: int, seed: int, out_save_dir: str,
+                 tfevent:str=None, tfeventname:str=None) -> None:
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -22,6 +23,8 @@ class SemanticKITTITrainer(Trainer):
         self.seed = seed
         self.epoch_num = 1
         self.out_save_dir = out_save_dir
+        self.tfevent = tfevent
+        self.tfeventname = tfeventname
 
     def _before_epoch(self) -> None:
         self.model.train()
@@ -29,9 +32,6 @@ class SemanticKITTITrainer(Trainer):
         self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
                 self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
         print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
-
-        #self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
-        #        self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
 
     def _run_step(self, feed_dict: Dict[str, Any]) -> Dict[str, Any]:   
         _inputs = dict()
@@ -43,7 +43,7 @@ class SemanticKITTITrainer(Trainer):
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
 
         outputs = self.model(inputs) # voxelized output (N,1)
-            
+
         if outputs.requires_grad:
             loss = self.criterion(outputs, targets)
             self.summary.add_scalar('loss', loss.item())
@@ -72,6 +72,7 @@ class SemanticKITTITrainer(Trainer):
             targets = torch.cat(_targets, 0)                
             #print(torch.min(outputs.cpu()), torch.max(outputs.cpu()))
             """
+
         return {'outputs': outputs, 'targets': targets}
 
     def _after_epoch(self) -> None:
@@ -125,3 +126,13 @@ class SemanticKITTITrainer(Trainer):
             
             feed_dict['targets'].F[start:subsize+start, :] = torch.from_numpy(crm_target).to(feed_dict['targets'].F)
             start += subsize
+
+    def _after_step(self, output_dict: Dict[str, Any]):
+        from torch.utils.tensorboard import SummaryWriter
+
+        assert  self.tfevent==None or self.tfeventname==None
+
+        writer = SummaryWriter(self.tfevent+self.tfeventname)
+        for name, param in self.model.named_parameters():
+            if 'bn' not in name:
+                writer.add_histogram(name, param.grad, self.global_step)

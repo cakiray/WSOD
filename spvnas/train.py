@@ -126,7 +126,10 @@ def main() -> None:
                       MinSaver(scalar='mse/valid',name=dt_string, save_dir=configs.best_model ),
                       Saver(save_dir=configs.checkpoints),
                       TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
-                  ])
+                  ],
+        tfevent=configs.tfevent,
+        tfeventname=configs.tfeventname
+    )
 
 
     # TESTING
