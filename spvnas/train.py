@@ -114,7 +114,9 @@ def main() -> None:
                                scheduler=scheduler,
                                num_workers=configs.workers_per_gpu,
                                seed=configs.train.seed,
-                               out_save_dir=configs.outputs)
+                               out_save_dir=configs.outputs,
+                               tfevent=configs.tfevent,
+                               tfeventname=configs.tfeventname)
     trainer.train_with_defaults(
         dataflow['train'],
         num_epochs=configs.num_epochs,
@@ -126,9 +128,7 @@ def main() -> None:
                       MinSaver(scalar='mse/valid',name=dt_string, save_dir=configs.best_model ),
                       Saver(save_dir=configs.checkpoints),
                       TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
-                  ],
-        tfevent=configs.tfevent,
-        tfeventname=configs.tfeventname
+                  ]
     )
 
 
