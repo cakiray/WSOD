@@ -78,7 +78,7 @@ class SemanticKITTITrainer(Trainer):
     def _after_epoch(self) -> None:
         from torch.utils.tensorboard import SummaryWriter
 
-        assert  self.tfevent==None or self.tfeventname==None
+        assert  self.tfevent!=None and self.tfeventname!=None
 
         writer = SummaryWriter(self.tfevent+self.tfeventname)
         for name, param in self.model.named_parameters():
