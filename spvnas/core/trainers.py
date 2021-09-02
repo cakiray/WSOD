@@ -76,6 +76,15 @@ class SemanticKITTITrainer(Trainer):
         return {'outputs': outputs, 'targets': targets}
 
     def _after_epoch(self) -> None:
+        from torch.utils.tensorboard import SummaryWriter
+
+        assert  self.tfevent==None or self.tfeventname==None
+
+        writer = SummaryWriter(self.tfevent+self.tfeventname)
+        for name, param in self.model.named_parameters():
+            if 'bn' not in name:
+                writer.add_histogram(name, param.grad, self.epoch_num)
+
         self.model.eval()
 
     def _state_dict(self) -> Dict[str, Any]:
@@ -128,6 +137,7 @@ class SemanticKITTITrainer(Trainer):
             start += subsize
 
     def _after_step(self, output_dict: Dict[str, Any]):
+        """
         from torch.utils.tensorboard import SummaryWriter
 
         assert  self.tfevent==None or self.tfeventname==None
@@ -136,3 +146,5 @@ class SemanticKITTITrainer(Trainer):
         for name, param in self.model.named_parameters():
             if 'bn' not in name:
                 writer.add_histogram(name, param.grad, self.global_step)
+        """
+        pass
