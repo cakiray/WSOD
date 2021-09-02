@@ -137,14 +137,15 @@ class SemanticKITTITrainer(Trainer):
             start += subsize
 
     def _after_step(self, output_dict: Dict[str, Any]):
-        """
+
         from torch.utils.tensorboard import SummaryWriter
 
-        assert  self.tfevent==None or self.tfeventname==None
+        assert  self.tfevent!=None or self.tfeventname!=None
 
         writer = SummaryWriter(self.tfevent+self.tfeventname)
         for name, param in self.model.named_parameters():
             if 'bn' not in name:
+                print(name, type(param), type(param.grad))
                 writer.add_histogram(name, param.grad, self.global_step)
-        """
+
         pass
