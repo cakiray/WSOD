@@ -184,6 +184,8 @@ def main() -> None:
             if bbox_precision >= 0.0:
                 mbbox_precision += bbox_precision
                 bbox_p += 1
+
+            count += len(peak_list)
         else:
             break
     mbbox_recall /= bbox_r
