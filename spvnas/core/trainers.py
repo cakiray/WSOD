@@ -76,14 +76,15 @@ class SemanticKITTITrainer(Trainer):
         return {'outputs': outputs, 'targets': targets}
 
     def _after_epoch(self) -> None:
-        from torch.utils.tensorboard import SummaryWriter
+        if self.model.training:
+            from torch.utils.tensorboard import SummaryWriter
 
-        assert  self.tfevent!=None and self.tfeventname!=None
+            assert  self.tfevent!=None and self.tfeventname!=None
 
-        writer = SummaryWriter(self.tfevent+self.tfeventname)
-        for name, param in self.model.named_parameters():
-            if 'bn' not in name:
-                writer.add_histogram(name, param.grad, self.epoch_num)
+            writer = SummaryWriter(self.tfevent+self.tfeventname)
+            for name, param in self.model.named_parameters():
+                if 'bn' not in name:
+                    writer.add_histogram(name, param.grad, self.epoch_num)
 
         self.model.eval()
 
@@ -103,7 +104,7 @@ class SemanticKITTITrainer(Trainer):
         pass
 
     def _before_step(self, feed_dict: Dict[str, Any]) -> None:
-
+        """
         # Before step, generetate new CRM with required radius.
         # Then update feed_dict
         from core.datasets.utils import generate_CRM_wfiles
@@ -135,7 +136,8 @@ class SemanticKITTITrainer(Trainer):
             
             feed_dict['targets'].F[start:subsize+start, :] = torch.from_numpy(crm_target).to(feed_dict['targets'].F)
             start += subsize
-
+        """
+        pass
     def _after_step(self, output_dict: Dict[str, Any]):
         """
         from torch.utils.tensorboard import SummaryWriter
