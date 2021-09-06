@@ -20,10 +20,11 @@ dataset:
   voxel_size: 0.05
   quantization_size: 3
   
-num_epochs: 5
+num_epochs: 10
 prm:
   win_size: 5
-  peak_threshold: 0.15
+  peak_threshold: 0.3
+  iou_threshold: 0.5
 
 batch_size: 8
 batch_norm: true
@@ -31,9 +32,9 @@ workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
-tfeventname: /experiment
+tfeventname: /spvnascnn_wd0_lr001_noskipcon
 
-outputs: /data/Ezgi/spvnas_cnn_wd-6-lr001-e5
+outputs: /data/Ezgi/spvnas_cnn-wd0-lr001-e5
 
 model:
   name: spvnas_cnn
@@ -44,8 +45,8 @@ criterion:
 
 optimizer:
   name: adam
-  lr: 1.0e-2
-  weight_decay: 1.0e-6
+  lr: 1.0e-3
+  weight_decay: 0.0
   momentum: 0.9
   nesterov: true
 
