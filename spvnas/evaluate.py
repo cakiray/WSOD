@@ -85,7 +85,7 @@ def main() -> None:
     mbbox_recall,mbbox_precision =0.0, 0.0
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
-    iou_threshold = configs.prm.iout_threshold
+    iou_threshold = configs.prm.iou_threshold
     count, prec_count,recall_count = 0,0,0
     bbox_p, bbox_r = 0,0
 
