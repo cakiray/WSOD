@@ -36,6 +36,13 @@ def read_labels( label_path, idx=None):
 
     return label
 
+def get_car_num(label):
+    count = 0
+    for data in label:
+        if data['type'] == b'Car':
+            count += 1
+    return count
+
 def read_points( lidar_path, idx):
 
     path = os.path.join(lidar_path, '%06d.bin' % idx)
@@ -197,14 +204,11 @@ def bbox_recall(labels, idx_list): # RECALL = TP / TP + FN
     dontcare_noncar = 0
     num_bbox = len(labels)
     for i,label in enumerate(labels):
-        if label['type'] != b'DontCare':
-            if label['type'] == b'Car':
-                if idx_list[i] >0:
-                    tp += 1
-                else:
-                    fn += 1
+        if label['type'] == b'Car':
+            if idx_list[i] >0:
+                tp += 1
             else:
-                dontcare_noncar += 1
+                fn += 1
         else:
             dontcare_noncar += 1
 
@@ -218,16 +222,13 @@ def bbox_precision(labels, idx_list, fp): #PRECISION = TP / TP + FP
     dontcare_noncar = 0
     num_bbox = len(labels)
     for i,label in enumerate(labels):
-        if label['type'] != b'DontCare':
-            if label['type'] == b'Car':
-                if idx_list[i] >0:
-                    tp += 1
-            else:
-                dontcare_noncar += 1
-                if idx_list[i]>0:
-                    fp += 1
+        if label['type'] == b'Car':
+            if idx_list[i] >0:
+                tp += 1
         else:
             dontcare_noncar += 1
+            if idx_list[i]>0:
+                fp += 1
 
     # no bbox to detect or no peak is detected
     if dontcare_noncar == num_bbox or tp+fp == 0:
@@ -314,7 +315,7 @@ def FPS(peaks_idxs, points,  num_frags=-1):
       storing for each vertex the ID of the assigned fragment.
     """
     if num_frags == -1:
-        num_frags =max(3, len(peaks_idxs)//5)
+        num_frags =max(3, len(peaks_idxs)//3)
     
     # Start with the origin of the model coordinate system.
     peak_centers = [np.array([0., 0., 0.])]
