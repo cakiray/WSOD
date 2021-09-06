@@ -135,7 +135,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0 
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if n < 3:
+        if n < 10:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -278,7 +278,7 @@ def main() -> None:
                                 # if at least 1 channel of PRM has iou more that 50%, it would be true positive
                                 iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
                                 # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                                if iou_bbox[1] >= 0.25:
+                                if iou_bbox[1] >= 0.5:
                                     bbox_found_indicator[bbox_idx] = 1
                                 
                                 #print(  "IOU : ", iou_bbox[1])
