@@ -92,7 +92,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if True:# n < 10:
+        if True:#n < 10:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():
@@ -101,12 +101,12 @@ def main() -> None:
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             inputs = _inputs['lidar']
             targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-            print("\ncurrent file: ", filename)
+            #print("\ncurrent file: ", filename)
             # outputs are got 1-by-1 in test phase
             inputs.F.requires_grad = True
             outputs = model(inputs) # voxelized output (N,1)
             loss = criterion(outputs, targets)
-            print("\n\nloss: ", loss)
+            #print("\n\nloss: ", loss)
             # make outputs in shape [Batch_size, Channel_size, Data_size]
             if len(outputs.size()) == 2:
                 outputs_bcn = outputs[None, : , :]
@@ -119,6 +119,7 @@ def main() -> None:
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                                                     peak_threshold=peak_threshold, normalize=True)
+            """
             #print("peak list after backprop ", len(peak_list))
             #save the subsampled output and subsampled point cloud
             out = outputs.cpu()
@@ -130,7 +131,7 @@ def main() -> None:
                 for i in range(len(peak_responses)):
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-
+            """
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
@@ -139,7 +140,7 @@ def main() -> None:
             labels = utils.read_labels( label_file)
             bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
             fp_bbox = 0
-            print(f"Valid peak len:{len(peak_list)}, Number of cars: {utils.get_car_num(labels)}")
+            #print(f"Valid peak len:{len(peak_list)}, Number of cars: {utils.get_car_num(labels)}")
             #Calculate mprecision and mrecall of each peak_response individually
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])

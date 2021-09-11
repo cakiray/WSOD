@@ -54,7 +54,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     # PRM paper to calculate gradient
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
-    print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
+    #print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
 
     valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
