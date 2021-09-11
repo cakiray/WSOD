@@ -92,7 +92,7 @@ def main() -> None:
     print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        if n < 10:
+        if True:# n < 10:
             n += 1
             _inputs = dict()
             for key, value in feed_dict.items():

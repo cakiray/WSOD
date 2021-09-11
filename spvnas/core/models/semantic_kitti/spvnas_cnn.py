@@ -320,7 +320,7 @@ class SPVNAS_CNN(nn.Module):
         z1.F = z1.F + self.point_transforms[0](z0.F)
 
         y1 = point_to_voxel(x4, z1)
-        y1.F = self.dropout(y1.F)
+        #y1.F = self.dropout(y1.F)
         y1 = self.up1[0](y1)
         y1 = torchsparse.cat([y1, x3])
         y1 = self.up1[1](y1)
@@ -332,7 +332,7 @@ class SPVNAS_CNN(nn.Module):
         z2.F = z2.F + self.point_transforms[1](z1.F)
 
         y3 = point_to_voxel(y2, z2)
-        y3.F = self.dropout(y3.F)
+        #y3.F = self.dropout(y3.F)
         y3 = self.up3[0](y3)
         y3 = torchsparse.cat([y3, x1])
         y3 = self.up3[1](y3)

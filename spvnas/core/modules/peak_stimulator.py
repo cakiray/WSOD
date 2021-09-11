@@ -117,7 +117,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             grad = inputs.F.grad # N x input_channel_num
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
-            print("prm nonzero ", (prm!=0.0).sum(0))
+            #print("prm nonzero ", (prm!=0.0).sum(0))
             
             prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
             prm = np.asarray(prm)
@@ -130,7 +130,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 #print("min max ", mins, maxs)
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
-
+                prm[prm<0.0005] = 0.0
             #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
             #prm = prm.sum(1) # sums columns
             #peak_response_maps.append( prm / prm.sum() )

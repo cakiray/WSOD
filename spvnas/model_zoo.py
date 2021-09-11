@@ -64,6 +64,7 @@ def spvnas_cnn(pretrained=False, **kwargs):
         macro_depth_constraint=1,
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
     #model.shrink()
+    #model.remove_skipconnection()
     if pretrained:
         dict_ = torch.load(kwargs['weights'])['model']
         dict_correct_naming = dict()

@@ -315,7 +315,7 @@ def FPS(peaks_idxs, points,  num_frags=-1):
       storing for each vertex the ID of the assigned fragment.
     """
     if num_frags == -1:
-        num_frags =max(3, len(peaks_idxs)//3)
+        num_frags =max(3, len(peaks_idxs)//10)
     
     # Start with the origin of the model coordinate system.
     peak_centers = [np.array([0., 0., 0.])]
