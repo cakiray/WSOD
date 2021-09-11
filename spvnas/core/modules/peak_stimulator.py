@@ -62,11 +62,11 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         if peak_val > peak_threshold:
             valid_peak_list.append(peak_list[idx,:])
 
+    
     # Further point sampling
     # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
     points = np.asarray(inputs.F[:,0:3].detach().cpu())
     peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
-
     #peak_response_maps = []
     valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
@@ -83,9 +83,9 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             # Set K nearest neighbors of peak as 1, backpropagate from a group of points
             k=1
             #knn_list = utils.KNN(points=inputs.F, anchor=peak_list[idx,2], k=k)
-            knn_list = utils.KNN(points=inputs.F, anchor=valid_peak_list[idx,2], k=k)
+            knn_list = utils.KNN(points=inputs.F, anchor=valid_peak_list[idx][2], k=k)
             for n in knn_list:
-                grad_output[valid_peak_list[idx, 0], valid_peak_list[idx, 1], n] = 1
+                grad_output[valid_peak_list[idx][0], valid_peak_list[idx][1], n] = 1
                 #grad_output[peak_list[idx, 0], peak_list[idx, 1], n] = 1
 
             if inputs.F.grad is not None:
@@ -97,7 +97,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             grad = inputs.F.grad # N x input_channel_num
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
-            prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
+            prm = np.asarray(np.absolute( prm )) # shape: N x input_channel_num, 2D
+            print("prm shape", prm.shape)
             #normalize gradient 0 <= prm <= 1
             if normalize:
                 #mins= np.amin(np.array(prm[prm>0.0]), axis=0)
