@@ -87,26 +87,37 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     else:
         return [], [], []
     """
-    
     valid_peak_list = []
-    peak_response_maps = []
+    for idx in range(peak_list.size(0)):
+        peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
+        if peak_val > peak_threshold:
+            valid_peak_list.append(peak_list[idx,:])
+
+    # Further point sampling
+    # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
+    points = np.asarray(inputs.F[:,0:3].detach().cpu())
+    peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
+
+    #peak_response_maps = []
     valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
 
-    for idx in range(peak_list.size(0)):
-        peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
-        
-        if peak_val > peak_threshold:
+    #for idx in range(peak_list.size(0)):
+    for idx in range(len(valid_peak_list)):
+        #peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
+        #if peak_val > peak_threshold:
+        if True:
             grad_output.zero_()
             # Set 1 to the max of predicted center points in gradient
             #grad_output[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]] = 1e10
-            #grad_output = torch.ones_like(outputs)
 
             # Set K nearest neighbors of peak as 1, backpropagate from a group of points
             k=1
-            knn_list = utils.KNN(points=inputs.F, anchor=peak_list[idx,2], k=k)
+            #knn_list = utils.KNN(points=inputs.F, anchor=peak_list[idx,2], k=k)
+            knn_list = utils.KNN(points=inputs.F, anchor=valid_peak_list[idx,2], k=k)
             for n in knn_list:
-                grad_output[peak_list[idx, 0], peak_list[idx, 1], n] = 1
+                grad_output[valid_peak_list[idx, 0], valid_peak_list[idx, 1], n] = 1
+                #grad_output[peak_list[idx, 0], peak_list[idx, 1], n] = 1
 
             if inputs.F.grad is not None:
                 inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
@@ -117,10 +128,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             grad = inputs.F.grad # N x input_channel_num
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
-            #print("prm nonzero ", (prm!=0.0).sum(0))
-            
             prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
-            prm = np.asarray(prm)
             #normalize gradient 0 <= prm <= 1
             if normalize:
                 #mins= np.amin(np.array(prm[prm>0.0]), axis=0)
@@ -131,25 +139,27 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
                 prm[prm<0.0005] = 0.0
-            #prm = grad.sum(1).clone().clamp(min=0).detach().cpu()
-            #prm = prm.sum(1) # sums columns
-            #peak_response_maps.append( prm / prm.sum() )
-            peak_response_maps.append(prm)
-            peak_response_maps_con +=np.asarray( prm)
-            #valid_peak_list contains indexes of valid peaks in center response map, shape: Mx3, e.g.[0,0,idx]
-            valid_peak_list.append(peak_list[idx,:])
+                prm = utils.maxpool(prm) #channel no is 1 from now on
+                prm = utils.assignAvgofNeighbors(points=inputs.F, prm=prm, k=10)
 
-    if len(peak_response_maps) >0:
+            #peak_response_maps.append(prm)
+            valid_peak_response_map.append(prm)
+            peak_response_maps_con +=prm
+            #valid_peak_list contains indexes of valid peaks in center response map, shape: Mx3, e.g.[0,0,idx]
+            #valid_peak_list.append(valid_peak_list[idx,:])
+
+    #if len(peak_response_maps) >0:
+    if len(valid_peak_response_map) >0:
         # shape = len(valid_peak_list), 2
         valid_peak_list = torch.stack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
-        
+        #valid_peak_response_map = [peak_response_maps[i] for i in valid_indexes]
+        """
         # Further point sampling 
         # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
-        
         points = np.asarray(inputs.F[:,0:3].detach().cpu())
         peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
         valid_peak_response_map = [peak_response_maps[i] for i in valid_indexes]
-        
+        """
         
         # peak responses of each valid peak list is concatanated vertically
         # shape = (len(valid_peak_list) * number_of_points_in_scene), channel_no_of_grad
