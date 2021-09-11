@@ -56,20 +56,20 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output.zero_()
     print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
 
+    valid_peak_response_map = []
+    peak_response_maps_con = np.zeros((inputs.F.shape))
     valid_peak_list = []
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
         if peak_val > peak_threshold:
             valid_peak_list.append(peak_list[idx,:])
 
-    
+    if len(valid_peak_list) <= 0:
+        return valid_peak_list, valid_peak_response_map, peak_response_maps_con
     # Further point sampling
     # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
     points = np.asarray(inputs.F[:,0:3].detach().cpu())
     peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
-    #peak_response_maps = []
-    valid_peak_response_map = []
-    peak_response_maps_con = np.zeros((inputs.F.shape))
 
     #for idx in range(peak_list.size(0)):
     for idx in range(len(valid_peak_list)):
