@@ -181,12 +181,10 @@ def iou_recall_crm(preds, targets,  n_classes=2):
 
 def find_bbox(point, labels, calibs, class_='Car'):
     bboxes = get_bboxes(labels=labels, calibs=calibs)
-    print("labels: ", labels)
     i=-1
     for label in labels:
-        if label['type'] != b'DontCare':
-            i += 1
-        if label['type'] == class_:
+        i += 1
+        if label['type'] == b'Car':
             bbox = bboxes[i*8:(i+1)*8-1]
             p1, p2, p4, p5 = bbox[0], bbox[1], bbox[3], bbox[4]
             u, v, w, p = p2-p1, p4-p1, p5-p1, point-p1
@@ -195,7 +193,6 @@ def find_bbox(point, labels, calibs, class_='Car'):
             wx = np.dot(p,w) < np.dot(w,w) and np.dot(p,w)>0.0 
         
             if (ux and vx) and wx:
-                print("bbox index: ", i)
                 return np.asarray([label]), i
 
     return None, -1

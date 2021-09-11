@@ -98,9 +98,9 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
             prm = np.asarray(np.absolute( prm )) # shape: N x input_channel_num, 2D
-            print("prm shape", prm.shape)
             #normalize gradient 0 <= prm <= 1
             if normalize:
+                prm = utils.maxpool(prm) #channel no is 1 from now on
                 #mins= np.amin(np.array(prm[prm>0.0]), axis=0)
                 mins = np.asarray( [ np.amin(prm[prm[:,i]>0.0][:,i]) for i in range(prm.shape[1]) ] )
                 maxs = np.amax(np.array(prm), axis=0)
@@ -109,7 +109,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
                 prm[prm<0.0005] = 0.0
-                prm = utils.maxpool(prm) #channel no is 1 from now on
+
                 #prm = utils.assignAvgofNeighbors(points=inputs.F, prm=prm, k=10)
 
             #peak_response_maps.append(prm)
@@ -118,7 +118,6 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             #valid_peak_list contains indexes of valid peaks in center response map, shape: Mx3, e.g.[0,0,idx]
             #valid_peak_list.append(valid_peak_list[idx,:])
 
-    print("val peak list ", valid_peak_list)
     #if len(peak_response_maps) >0:
     if False:
     #if len(valid_peak_response_map) >0:
