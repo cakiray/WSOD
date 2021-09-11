@@ -120,7 +120,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
 
     print("val peak list ", valid_peak_list)
     #if len(peak_response_maps) >0:
-    if len(valid_peak_response_map) >0:
+    if False:
+    #if len(valid_peak_response_map) >0:
         # shape = len(valid_peak_list), 2
         valid_peak_list = np.vstack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
         #valid_peak_response_map = [peak_response_maps[i] for i in valid_indexes]
