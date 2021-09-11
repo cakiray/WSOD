@@ -345,10 +345,9 @@ def FPS(peaks_idxs, points,  num_frags=-1):
             nn_dists, np.linalg.norm(peak_locs - new_center, axis=1))
 
     # Remove the origin.
-    peak_centers.pop(0)
-    peak_centers = np.array(peak_centers) # 3D info of peak centers
+    peak_centers.pop(0)# 3D info of peak centers
     
-    return peak_centers, valid_peak_list, valid_indexes
+    return np.asarray(peak_centers), np.asarray(valid_peak_list), np.asarray(valid_indexes)
 
 def KNN(points, anchor, k=10):
     points = points.detach().cpu().clone()

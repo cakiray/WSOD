@@ -55,38 +55,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
-    """
-    #normalize crm
-    mins = torch.min(outputs)
-    maxs = torch.max(outputs)
-    outputs = (outputs-mins)/(maxs-mins)
-    outputs[outputs==float('inf')] = 0.0
-    outputs[outputs==float('-inf')] = 0.0
 
-    if torch.max(outputs) > peak_threshold:
-
-        if inputs.F.grad is not None:
-            inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
-
-            # Calculate peak response maps backwarding the output
-        outputs.backward(outputs, retain_graph=True)
-        grad = inputs.F.grad # N x input_channel_num
-        # PRM is absolute of all channels
-        prm = grad.detach().cpu().clone()
-        print("prm nonzero ", (prm!=0.0).sum(0))
-        prm = np.absolute( prm ) # shape: N x input_channel_num, 2D
-        prm = np.asarray(prm)
-        if normalize:
-            mins = np.asarray( [ np.amin(prm[prm[:,i]>0.0][:,i]) for i in range(prm.shape[1]) ] )
-            maxs = np.amax(np.array(prm), axis=0)
-            prm = (prm-mins)/(maxs-mins)
-            prm[prm==float('inf')] = 0.0
-            prm[prm==float('-inf')] = 0.0
-        return [peak_list[0]], [prm], prm
-
-    else:
-        return [], [], []
-    """
     valid_peak_list = []
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
@@ -151,7 +120,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     #if len(peak_response_maps) >0:
     if len(valid_peak_response_map) >0:
         # shape = len(valid_peak_list), 2
-        valid_peak_list = torch.stack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
+        valid_peak_list = np.vstack(valid_peak_list) # [1,1,N] -> dimension of each channels of it
         #valid_peak_response_map = [peak_response_maps[i] for i in valid_indexes]
         """
         # Further point sampling 
