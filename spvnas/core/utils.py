@@ -371,10 +371,12 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
         corners_3d[i] = np_corners
         print("corner in rect  ", np_corners)
 
-        corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
+        """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
         print("corner in img  ", np_corners)
         corners_img[i] = corners_2d
-
+        """
+    corners_img = calibs.corners3d_to_img_boxes(corners_3d)
+    print("corners in 2d ", corners_img)
     img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
     img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
 
