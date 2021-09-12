@@ -99,6 +99,7 @@ def main() -> None:
             filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
             inputs = _inputs['lidar']
             targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
+            points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
             #print("\ncurrent file: ", filename)
             # outputs are got 1-by-1 in test phase
             inputs.F.requires_grad = True
@@ -124,6 +125,9 @@ def main() -> None:
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
+            utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
+
+
             bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
             fp_bbox = 0
             #print(f"Valid peak len:{len(peak_list)}, Number of cars: {utils.get_car_num(labels)}")
@@ -131,7 +135,6 @@ def main() -> None:
             for i in range(len(peak_list)):
                 prm = np.asarray(peak_responses[i])
                 peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
-                points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
                 peak = points[peak_ind[2]] # indx is at 3th element of peak variable
 
                 # Find bbox that the peak belongs to

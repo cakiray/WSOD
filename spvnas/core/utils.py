@@ -155,31 +155,6 @@ def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
 
     return np.array(recall)
 
-def iou_precision_crm(preds, targets,  n_classes=2):
-    precision = np.zeros(n_classes)
-
-    for cls in range(n_classes):
-        preds_inds = preds==cls
-        target_inds = targets==cls
-        tp = (preds_inds[target_inds]).sum()
-        fp = preds_inds.sum()-tp
-        precision[cls] = float(tp / (fp+tp))
-
-    return precision
-
-def iou_recall_crm(preds, targets,  n_classes=2):
-    recall = np.zeros(n_classes)
-
-    for cls in range(n_classes):
-        preds_inds = preds==cls
-        target_inds = targets==cls
-        non_pred_inds = preds!=cls
-        tp = (preds_inds[target_inds]).sum()
-        fn = non_pred_inds[target_inds].sum()
-        recall[cls] = float(tp / (tp+fn))
-        
-    return recall
-
 def find_bbox(point, labels, calibs, class_='Car'):
     bboxes = get_bboxes(labels=labels, calibs=calibs)
     i=-1
@@ -379,12 +354,47 @@ def KNN(points, anchor, k=10):
 
     return idxs
 
-def save_in_kitti_format(file_id, peak_responses, calibs):
-    calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
-    calibs = Calibration( calib_file )
-    #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
-    label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
-    labels = utils.read_labels( label_file)
+def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_responses, calibs, labels):
+    corners_3d = np.zeros(shape=(len(peak_responses), 8, 3) )
+    corners_img = np.zeros(shape=(len(peak_responses), 4, 2) )
+    for i,response in enumerate(peak_responses):
+        mask = response>0.0
+        pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
+        bbox = open3d.geometry.AxisAlignedBoundingBox()
+        bbox = bbox.create_from_points(pc_)
+        corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
+        np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
+
+        print("corner in velo ", np_corners)
+        #corners from velodyne to rect
+        np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
+        corners_3d[i] = np_corners
+        print("corner in rect  ", np_corners)
+
+        corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
+        print("corner in img  ", np_corners)
+        corners_img[i] = corners_2d
+
+    img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
+    img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
+
+    kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
+    with open(kitti_output_file, 'w') as f:
+        for k in range(len(peak_responses)):
+            x, z, ry = corners_3d[k, 0], corners_3d[k, 2], 0
+            beta = np.arctan2(z, x)
+            alpha = -np.sign(beta) * np.pi / 2 + beta + ry
+            # h->z, w->x, l->y
+            h, w, l = np.absolute(corners_o3d[k,0,2]-corners_o3d[k,2,2]), np.absolute(corners_o3d[k,0,0]-corners_o3d[k,1,0]), np.absolute(corners_o3d[k,0,3]-corners_o3d[k,3,3])
+            x, y, z = corners_o3d[k,0] + w/2, corners_o3d[k,0] + l/2, corners_o3d[k,2]
+            score = crm[peak_list[k][2]]
+            print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
+                  ('Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
+                   h, w, l, x, y, z, ry, score), file=f)
+
+            print('\n\nsonuçç Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
+                  h, w, l, x, y, z, ry, score)
+
 
 def assignAvgofNeighbors(points, prm, k=10):
     for i in prm:

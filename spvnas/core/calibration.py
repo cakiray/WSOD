@@ -168,6 +168,21 @@ class Calibration(object):
         pts_3d_rect = self.project_image_to_rect(uv_depth)
         return self.project_rect_to_velo(pts_3d_rect)
 
+    def corners3d_to_img_boxes(self, corners3d):
+        """
+        :param corners3d: (N, 8, 3) corners in rect coordinate
+        :return: boxes: (None, 4) [x1, y1, x2, y2] in rgb coordinate
+        """
+        sample_num = corners3d.shape[0]
+        corners3d_hom = np.concatenate((corners3d, np.ones((sample_num, 8, 1))), axis=2)  # (N, 8, 4)
+        img_pts = np.matmul(corners3d_hom, self.P2.T)  # (N, 8, 3)
+
+        x, y = img_pts[:, :, 0] / img_pts[:, :, 2], img_pts[:, :, 1] / img_pts[:, :, 2]
+        x1, y1 = np.min(x, axis=1), np.min(y, axis=1)
+        x2, y2 = np.max(x, axis=1), np.max(y, axis=1)
+
+        boxes = np.concatenate((x1.reshape(-1, 1), y1.reshape(-1, 1), x2.reshape(-1, 1), y2.reshape(-1, 1)), axis=1)
+        return boxes
 
 def rotx(t):
     ''' 3D Rotation about the x-axis. '''
