@@ -1,3 +1,4 @@
+import math
 import os
 import numpy as np
 import struct
@@ -343,8 +344,29 @@ def FPS(peaks_idxs, points,  num_frags=-1):
 
     # Remove the origin.
     peak_centers.pop(0)# 3D info of peak centers
-    
-    return np.asarray(peak_centers), np.asarray(valid_peak_list), np.asarray(valid_indexes)
+
+    new_peak_centers = []
+    new_valid_peak_list = []
+    new_valid_indexes = []
+
+    for i,center in enumerate(peak_centers):
+        far = True
+        for new_center in new_peak_centers:
+            dist = L2dist(center, new_center)
+            if dist < 2.0:
+                far=False
+        if far:
+            new_peak_centers.append(center)
+            new_valid_peak_list.append(valid_peak_list[i])
+            new_valid_indexes.append(valid_indexes[i])
+    print("new valid centers", new_peak_centers)
+    print("peak len old and new ", len(peaks_idxs), len(new_valid_peak_list))
+
+    return np.asarray(new_peak_centers), np.asarray(new_valid_peak_list), np.asarray(new_valid_indexes)
+
+def L2dist(p1, p2):
+
+    return math.sqrt( (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2)
 
 def KNN(points, anchor, k=10):
     points = points.detach().cpu().clone()
