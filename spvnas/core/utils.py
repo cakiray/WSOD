@@ -273,9 +273,10 @@ def generate_car_masks(points, labels, calibs):
     return map
 
 def generate_prm_mask(prm):
-    prm[prm > 0.0] = 1
-    prm[prm <= 0.0] = 0
-    return prm
+    mask = np.zeros_like(prm)
+    mask[prm > 0.0] = 1
+    mask[prm <= 0.0] = 0
+    return mask
 
 def normalize(arr):
     min = np.min(arr[arr>0.0])
