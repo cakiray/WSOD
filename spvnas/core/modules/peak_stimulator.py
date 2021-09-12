@@ -111,7 +111,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 prm[prm<0.0005] = 0.0
 
                 #prm = utils.assignAvgofNeighbors(points=inputs.F, prm=prm, k=10)
-
+            #print("center and argmax center point ", points[np.argmax(prm)], points[valid_peak_list[idx][2]])
             #peak_response_maps.append(prm)
             valid_peak_response_map.append(prm)
             peak_response_maps_con +=prm
@@ -137,6 +137,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         #peak_response_maps_con = torch.cat(peak_response_maps, 0)
         #peak_response_maps_con = sum(peak_response_maps)
         #print("# of peak responses and shape ", len(peak_response_maps), valid_peak_list.shape, peak_response_maps[0].shape)
-        
+    
+    
     return valid_peak_list, valid_peak_response_map, peak_response_maps_con
 

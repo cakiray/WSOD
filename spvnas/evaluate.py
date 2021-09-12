@@ -88,8 +88,6 @@ def main() -> None:
     iou_threshold = configs.prm.iou_threshold
     count, prec_count,recall_count = 0,0,0
     bbox_p, bbox_r = 0,0
-
-    print(f"Win size: {win_size}, Peak_threshold: {peak_threshold}")
     n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
         if True:#n < 10:
@@ -176,16 +174,16 @@ def main() -> None:
 
             count += len(peak_list)
 
-            if fp_bbox>0:
+            if True:#fp_bbox>0:
                 out = outputs.cpu()
                 inp_pc = inputs.F.cpu() # input point cloud
                 # concat_in_out.shape[0]x5, first columns are pc, last 1 column is output
                 concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1)
                 np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-                if len(peak_list) >0:
-                    for i in range(len(peak_responses)):
-                        prm = peak_responses[i]
-                        np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
+                
+                for i in range(len(peak_responses)):
+                    prm = peak_responses[i]
+                    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
 
         else:
             break
