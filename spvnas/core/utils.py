@@ -353,9 +353,12 @@ def FPS(peaks_idxs, points,  num_frags=-1):
         far = True
         for new_center in new_peak_centers:
             dist = L2dist_2d(center, new_center)
+            print("centers nad dist" , center, new_center, dist)
             if dist < 2.0:
+                print("dist küçük ", dist)
                 far=False
                 break
+                
         if far:
             new_peak_centers.append(center)
             new_valid_peak_list.append(valid_peak_list[i])
