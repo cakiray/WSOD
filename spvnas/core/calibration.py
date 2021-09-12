@@ -175,7 +175,7 @@ class Calibration(object):
         """
         sample_num = corners3d.shape[0]
         corners3d_hom = np.concatenate((corners3d, np.ones((sample_num, 8, 1))), axis=2)  # (N, 8, 4)
-        img_pts = np.matmul(corners3d_hom, self.P2.T)  # (N, 8, 3)
+        img_pts = np.matmul(corners3d_hom, self.P.T)  # (N, 8, 3)
 
         x, y = img_pts[:, :, 0] / img_pts[:, :, 2], img_pts[:, :, 1] / img_pts[:, :, 2]
         x1, y1 = np.min(x, axis=1), np.min(y, axis=1)

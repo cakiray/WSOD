@@ -358,7 +358,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
     corners_3d = np.zeros(shape=(len(peak_responses), 8, 3) )
     corners_img = np.zeros(shape=(len(peak_responses), 4, 2) )
     for i,response in enumerate(peak_responses):
-        mask = response>0.0
+        mask = response.flatten()>0.0
         pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
