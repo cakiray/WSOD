@@ -352,21 +352,22 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     for i,center in enumerate(peak_centers):
         far = True
         for new_center in new_peak_centers:
-            dist = L2dist(center, new_center)
+            dist = L2dist_2d(center, new_center)
             if dist < 2.0:
                 far=False
+                break
         if far:
             new_peak_centers.append(center)
             new_valid_peak_list.append(valid_peak_list[i])
             new_valid_indexes.append(valid_indexes[i])
-    print("new valid centers", new_peak_centers)
-    print("peak len old and new ", len(peaks_idxs), len(new_valid_peak_list))
+    #print("new valid centers", new_peak_centers)
+    #print("peak len old and new ", len(peaks_idxs), len(new_valid_peak_list))
 
     return np.asarray(new_peak_centers), np.asarray(new_valid_peak_list), np.asarray(new_valid_indexes)
 
-def L2dist(p1, p2):
+def L2dist_2d(p1, p2):
 
-    return math.sqrt( (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2)
+    return math.sqrt( (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 )
 
 def KNN(points, anchor, k=10):
     points = points.detach().cpu().clone()
