@@ -386,7 +386,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             min_bound = bbox.get_min_bound()
             max_bound = bbox.get_max_bound()
             dimensions = max_bound-min_bound
-            h, w, l = dimensions[1], dimensions[2], dimensions[0]
+            h, w, l = dimensions[1]/2, dimensions[0], dimensions[2]
             print("min max bound, h w l , ", min_bound, max_bound, dimensions, h,w,l)
             #h, w, l = np.absolute(np_corners_rect[0,2]-np_corners_rect[1,2]), np.absolute(np_corners_rect[0,0]-np_corners_rect[2,0]), np.absolute(np_corners_rect[0,1]-np_corners_rect[3,1])
             #x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
