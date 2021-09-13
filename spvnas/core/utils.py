@@ -383,19 +383,21 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     with open(kitti_output_file, 'w') as f:
         for k in range(len(peak_responses)):
-            x, z, ry = corners_3d[k, 0], corners_3d[k, 2], 0
+            x, z, ry = corners_3d[k,0, 0], corners_3d[k, 0, 2], 0
             beta = np.arctan2(z, x)
             alpha = -np.sign(beta) * np.pi / 2 + beta + ry
             # h->z, w->x, l->y
             h, w, l = np.absolute(corners_3d[k,0,2]-corners_3d[k,1,2]), np.absolute(corners_3d[k,0,0]-corners_3d[k,2,0]), np.absolute(corners_3d[k,0,1]-corners_3d[k,3,1])
-            x, y, z = corners_3d[k,0] + w/2, corners_3d[k,0] + l/2, corners_3d[k,2]
-            score = crm[peak_list[k][2]]
+            x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
+            score = crm[peak_list[k][2]].item()
+
+            print('\n\nsonuçç Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
+                  h, w, l, x, y, z, ry, score)
+
             print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
                   ('Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
                    h, w, l, x, y, z, ry, score), file=f)
 
-            print('\n\nsonuçç Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
-                  h, w, l, x, y, z, ry, score)
 
 
 def assignAvgofNeighbors(points, prm, k=10):
