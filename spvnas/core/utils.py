@@ -354,54 +354,60 @@ def KNN(points, anchor, k=10):
 
     return idxs
 
+#https://github.com/sshaoshuai/PointRCNN/blob/1d0dee91262b970f460135252049112d80259ca0/tools/eval_rcnn.py
 def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_responses, calibs, labels):
     corners_3d = np.zeros(shape=(len(peak_responses), 8, 3) )
     corners_img = np.zeros(shape=(len(peak_responses), 4, 2) )
     centers_3d =  np.zeros(shape=(len(peak_responses), 3, 1))
-    for i,response in enumerate(peak_responses):
-        mask = response.flatten()>0.0
-        pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
-        bbox = open3d.geometry.AxisAlignedBoundingBox()
-        bbox = bbox.create_from_points(pc_)
-        corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
-        np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
-        np_center = bbox.get_center() #numpy, 3x1
-        print("corner in velo ", np_corners)
-        #corners from velodyne to rect
-        np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
-        corners_3d[i] = np_corners
-        print("corner in rect  ", np_corners)
-
-        np_center = calibs.project_velo_to_rect(np_center)
-        centers_3d[i] = np_center
-        """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
-        print("corner in img  ", np_corners)
-        corners_img[i] = corners_2d
-        """
-    corners_img = calibs.corners3d_to_img_boxes(corners_3d)
-    print("corners in 2d ", corners_img)
-    img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
-    img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
-
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     with open(kitti_output_file, 'w') as f:
-        for k in range(len(peak_responses)):
-            x, y, z = centers_3d[k,0], centers_3d[k,1], centers_3d[k,2]
+        for i,response in enumerate(peak_responses):
+            mask = response.flatten()>0.0
+            pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
+            bbox = open3d.geometry.AxisAlignedBoundingBox()
+            bbox = bbox.create_from_points(pc_)
+            corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
+            np_corners_velo = np.asarray(corners_o3d) #Numpy array, 8x3
+
+            print("corner in velo ", np_corners_velo)
+            #corners from velodyne to rect
+            np_corners_rect = calibs.project_velo_to_rect(np_corners_velo) # 8x3
+
+            print("corner in rect  ", np_corners_rect)
+
+            np_center_velo = bbox.get_center() #numpy, 3x1
+            np_center_rect = calibs.project_velo_to_rect(np_center_velo)
+
+            """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
+            print("corner in img  ", np_corners)
+            corners_img[i] = corners_2d
+            """
+            corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners_rect]))
+            print("corners in 2d ", corners_img)
+
+            x, y, z = np_center_rect[0], np_center_rect[1], np_center_rect[2]
             ry = 0
             beta = np.arctan2(z, x)
             alpha = -np.sign(beta) * np.pi / 2 + beta + ry
             # h->z, w->x, l->y
-            h, w, l = np.absolute(corners_3d[k,0,2]-corners_3d[k,1,2]), np.absolute(corners_3d[k,0,0]-corners_3d[k,2,0]), np.absolute(corners_3d[k,0,1]-corners_3d[k,3,1])
+            min_bound = bbox.get_min_bound()
+            max_bound = bbox.get_max_bound()
+            dimensions = min_bound-max_bound
+            h, w, l = dimensions[0], dimensions[1], dimensions[2]
+            #h, w, l = np.absolute(np_corners_rect[0,2]-np_corners_rect[1,2]), np.absolute(np_corners_rect[0,0]-np_corners_rect[2,0]), np.absolute(np_corners_rect[0,1]-np_corners_rect[3,1])
             #x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
-            score = crm[peak_list[k][2]].item()
+            score = crm[peak_list[i][2]].item()
 
-            print('\n\nsonuçç Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
+            print('\n\nsonuçç Car', alpha, corners_img[0], corners_img[ 1], corners_img[2], corners_img[3],
                   h, w, l, x, y, z, ry, score)
 
             print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
-                  ('Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
+                  ('Car', alpha, corners_img[0], corners_img[1], corners_img[ 2], corners_img[ 3],
                    h, w, l, x, y, z, ry, score), file=f)
 
+            """img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
+           img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
+           """
 
 
 def assignAvgofNeighbors(points, prm, k=10):
