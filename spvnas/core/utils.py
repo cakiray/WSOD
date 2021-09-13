@@ -375,14 +375,14 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
 
             print("corner in rect  ", np_corners_rect)
 
-            np_center_velo = bbox.get_center().reshape(1,3) #numpy, 3x1
+            np_center_velo = bbox.get_center().reshape(1,3) #numpy, 1x3
             np_center_rect = calibs.project_velo_to_rect(np_center_velo)
 
             """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
             print("corner in img  ", np_corners)
             corners_img[i] = corners_2d
             """
-            corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners_rect]))
+            corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners_rect])) # 1x4
             print("corners in 2d ", corners_img)
             print("center rect ", np_center_rect)
             x, y, z = np_center_rect[0,0], np_center_rect[0,1], 0#np_center_rect[2]
@@ -394,11 +394,12 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             max_bound = bbox.get_max_bound()
             dimensions = min_bound-max_bound
             h, w, l = dimensions[0], dimensions[1], dimensions[2]
+            print("min max bound, h w l , ", min_bound, max_bound, dimensions, h,w,l)
             #h, w, l = np.absolute(np_corners_rect[0,2]-np_corners_rect[1,2]), np.absolute(np_corners_rect[0,0]-np_corners_rect[2,0]), np.absolute(np_corners_rect[0,1]-np_corners_rect[3,1])
             #x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
             score = crm[peak_list[i][2]].item()
 
-            print('\n\nsonuçç Car', alpha, corners_img[0], corners_img[ 1], corners_img[2], corners_img[3],
+            print('\n\nsonuçç Car', alpha, corners_img[0, 0], corners_img[0, 1], corners_img[0, 2], corners_img[0, 3],
                   h, w, l, x, y, z, ry, score)
 
             print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
