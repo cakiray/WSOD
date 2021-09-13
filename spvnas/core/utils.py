@@ -387,7 +387,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             beta = np.arctan2(z, x)
             alpha = -np.sign(beta) * np.pi / 2 + beta + ry
             # h->z, w->x, l->y
-            h, w, l = np.absolute(corners_3d[k,0,2]-corners_3d[k,2,2]), np.absolute(corners_3d[k,0,0]-corners_3d[k,1,0]), np.absolute(corners_3d[k,0,3]-corners_3d[k,3,3])
+            h, w, l = np.absolute(corners_3d[k,0,2]-corners_3d[k,1,2]), np.absolute(corners_3d[k,0,0]-corners_3d[k,2,0]), np.absolute(corners_3d[k,0,1]-corners_3d[k,3,1])
             x, y, z = corners_3d[k,0] + w/2, corners_3d[k,0] + l/2, corners_3d[k,2]
             score = crm[peak_list[k][2]]
             print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
