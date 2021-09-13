@@ -375,7 +375,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
 
             print("corner in rect  ", np_corners_rect)
 
-            np_center_velo = bbox.get_center() #numpy, 3x1
+            np_center_velo = bbox.get_center().reshape(1,3) #numpy, 3x1
             np_center_rect = calibs.project_velo_to_rect(np_center_velo)
 
             """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
