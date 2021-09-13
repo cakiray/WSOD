@@ -392,7 +392,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             # h->z, w->x, l->y
             min_bound = bbox.get_min_bound()
             max_bound = bbox.get_max_bound()
-            dimensions = min_bound-max_bound
+            dimensions = max_bound-min_bound
             h, w, l = dimensions[0], dimensions[1], dimensions[2]
             print("min max bound, h w l , ", min_bound, max_bound, dimensions, h,w,l)
             #h, w, l = np.absolute(np_corners_rect[0,2]-np_corners_rect[1,2]), np.absolute(np_corners_rect[0,0]-np_corners_rect[2,0]), np.absolute(np_corners_rect[0,1]-np_corners_rect[3,1])
@@ -403,7 +403,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
                   h, w, l, x, y, z, ry, score)
 
             print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
-                  ('Car', alpha, corners_img[0], corners_img[1], corners_img[ 2], corners_img[ 3],
+                  ('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
                    h, w, l, x, y, z, ry, score), file=f)
 
             """img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
