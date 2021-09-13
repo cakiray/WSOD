@@ -357,6 +357,7 @@ def KNN(points, anchor, k=10):
 def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_responses, calibs, labels):
     corners_3d = np.zeros(shape=(len(peak_responses), 8, 3) )
     corners_img = np.zeros(shape=(len(peak_responses), 4, 2) )
+    centers_3d =  np.zeros(shape=(len(peak_responses), 3, 1))
     for i,response in enumerate(peak_responses):
         mask = response.flatten()>0.0
         pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
@@ -364,13 +365,15 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
         bbox = bbox.create_from_points(pc_)
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
-
+        np_center = bbox.get_center() #numpy, 3x1
         print("corner in velo ", np_corners)
         #corners from velodyne to rect
         np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
         corners_3d[i] = np_corners
         print("corner in rect  ", np_corners)
 
+        np_center = calibs.project_velo_to_rect(np_center)
+        centers_3d[i] = np_center
         """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
         print("corner in img  ", np_corners)
         corners_img[i] = corners_2d
@@ -383,12 +386,13 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     with open(kitti_output_file, 'w') as f:
         for k in range(len(peak_responses)):
-            x, z, ry = corners_3d[k,0, 0], corners_3d[k, 0, 2], 0
+            x, y, z = centers_3d[k,0], centers_3d[k,1], centers_3d[k,2]
+            ry = 0
             beta = np.arctan2(z, x)
             alpha = -np.sign(beta) * np.pi / 2 + beta + ry
             # h->z, w->x, l->y
             h, w, l = np.absolute(corners_3d[k,0,2]-corners_3d[k,1,2]), np.absolute(corners_3d[k,0,0]-corners_3d[k,2,0]), np.absolute(corners_3d[k,0,1]-corners_3d[k,3,1])
-            x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
+            #x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
             score = crm[peak_list[k][2]].item()
 
             print('\n\nsonuçç Car', alpha, corners_img[k, 0], corners_img[k, 1], corners_img[k, 2], corners_img[k, 3],
