@@ -367,25 +367,24 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             bbox = open3d.geometry.AxisAlignedBoundingBox()
             bbox = bbox.create_from_points(pc_)
             corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
-            np_corners_velo = np.asarray(corners_o3d) #Numpy array, 8x3
-
-            print("corner in velo ", np_corners_velo)
+            np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
+            print("corner in velo ", np_corners)
             #corners from velodyne to rect
-            np_corners_rect = calibs.project_velo_to_rect(np_corners_velo) # 8x3
+            #np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
+            print("corner in rect  ", np_corners)
 
-            print("corner in rect  ", np_corners_rect)
-
-            np_center_velo = bbox.get_center().reshape(1,3) #numpy, 1x3
-            np_center_rect = calibs.project_velo_to_rect(np_center_velo)
+            #get center of bbox and convert from velo to rect
+            np_center = bbox.get_center().reshape(1,3) #numpy, 1x3
+            #np_center = calibs.project_velo_to_rect(np_center)
 
             """corners_2d = calibs.corners3d_to_img_boxes(np_corners) # 4x2
             print("corner in img  ", np_corners)
             corners_img[i] = corners_2d
             """
-            corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners_rect])) # 1x4
+            corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
             print("corners in 2d ", corners_img)
-            print("center rect ", np_center_rect)
-            x, y, z = np_center_rect[0,0], np_center_rect[0,1], 0#np_center_rect[2]
+            print("center rect ", np_center)
+            x, y, z = np_center[0,0], np_center[0,1], 0#np_center_rect[2]
             ry = 0
             beta = np.arctan2(z, x)
             alpha = -np.sign(beta) * np.pi / 2 + beta + ry
