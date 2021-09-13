@@ -385,7 +385,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners_rect]))
             print("corners in 2d ", corners_img)
             print("center rect ", np_center_rect)
-            x, y, z = np_center_rect[0], np_center_rect[1], 0#np_center_rect[2]
+            x, y, z = np_center_rect[0,0], np_center_rect[0,1], 0#np_center_rect[2]
             ry = 0
             beta = np.arctan2(z, x)
             alpha = -np.sign(beta) * np.pi / 2 + beta + ry
