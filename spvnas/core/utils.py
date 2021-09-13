@@ -366,34 +366,29 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             bbox = bbox.create_from_points(pc_)
             corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
             np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
-            print("corner in velo ", np_corners)
+        
             #corners from velodyne to rect
             np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
-            print("corner in rect  ", np_corners)
-
+            
             #get center of bbox and convert from velo to rect
             np_center = bbox.get_center().reshape(1,3) #numpy, 1x3
             np_center = calibs.project_velo_to_rect(np_center)
 
             corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-            print("corners in 2d ", corners_img)
-            print("center rect ", np_center)
-            x, y, z = np_center[0,0], np_center[0,1], np_center[0,2]
-            ry = 0
-            beta = np.arctan2(z, x)
-            alpha = -np.sign(beta) * np.pi / 2 + beta + ry
+            
             # h->z, w->x, l->y
             min_bound = bbox.get_min_bound()
             max_bound = bbox.get_max_bound()
             dimensions = max_bound-min_bound
-            h, w, l = dimensions[1]/2, dimensions[0], dimensions[2]
-            print("min max bound, h w l , ", min_bound, max_bound, dimensions, h,w,l)
-            #h, w, l = np.absolute(np_corners_rect[0,2]-np_corners_rect[1,2]), np.absolute(np_corners_rect[0,0]-np_corners_rect[2,0]), np.absolute(np_corners_rect[0,1]-np_corners_rect[3,1])
-            #x, y, z = corners_3d[k,0,0] - w/2, corners_3d[k,0,1] - l/2, corners_3d[k,0,2]
+            h, w, l = -dimensions[2], dimensions[0], dimensions[1]
+            x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
+            ry = 0
+            beta = np.arctan2(z, x)
+            alpha = -np.sign(beta) * np.pi / 2 + beta + ry
             score = crm[peak_list[i][2]].item()
 
-            print('\n\nsonuçç Car', alpha, corners_img[0, 0], corners_img[0, 1], corners_img[0, 2], corners_img[0, 3],
-                  h, w, l, x, y, z, ry, score)
+            #print('\n\nsonuçç Car', alpha, corners_img[0, 0], corners_img[0, 1], corners_img[0, 2], corners_img[0, 3],
+            #      h, w, l, x, y, z, ry, score)
 
             print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
                   ('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
