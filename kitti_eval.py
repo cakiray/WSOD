@@ -7,6 +7,9 @@ def _read_imageset_file(path):
         lines = f.readlines()
     return [int(line) for line in lines]
 
+ #How to run it:
+ # kitti_eval.py --det_path='/data/Ezgi/preds' --gt_path='/data/dataset/kitti/object/training/label_2' --val_txt='/data/dataset/kitti/object/training/val.txt'
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--det_path', metavar='DIR', help='detections saved path')
 parser.add_argument('--gt_path', type='DIR', help='ground truth path')
