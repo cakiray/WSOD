@@ -34,6 +34,25 @@ def read_labels( label_path, idx=None):
 
     return label
 
+def read_car_labels( label_path, idx=None):
+    if idx is not None:
+        path =os.path.join(label_path, '%06d.txt' % idx)
+    else:
+        path = label_path
+    label = np.loadtxt(path,
+                       dtype={'names': ('type', 'truncated', 'occuluded', 'alpha', 'xmin', 'ymin', 'xmax', 'ymax', 'h', 'w', 'l', 'x', 'y', 'z','rotation_y'),
+                              'formats': ('S14', 'float', 'float', 'float', 'float', 'float', 'float', 'float','float', 'float', 'float', 'float', 'float', 'float', 'float')})
+
+    if label.size == 1:
+        label = label[np.newaxis]
+
+    new_labels = []
+    for data in label:
+        if data['type'] == b'Car':
+            new_labels.append(data)
+
+    return np.asarray(new_labels)
+
 def read_points( lidar_path, idx):
 
     path = os.path.join(lidar_path, '%06d.bin' % idx)
@@ -58,6 +77,10 @@ def visualize_prm(pc, prm, bboxes=None):
     bbox = open3d.geometry.AxisAlignedBoundingBox()
     bbox.color = [1,0,1]
     bbox = bbox.create_from_points(pc_)
+
+    corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
+    np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
+    print(np_corners)
 
     if bboxes is not None:
         # Our lines span from points 0 to 1, 1 to 2, 2 to 3, etc...
@@ -111,7 +134,7 @@ def visualize_pointcloud_orig( pc, boxes=None):
     else:
         open3d.open3d.visualization.draw_geometries([pcd])
 
-def visualize_pointcloud( pc, colors, bboxes=None, idx=0, mult= 1, number= 0):
+def visualize_pointcloud( pc, colors, pred_bboxes=None, gt_bboxes=None, idx=0, mult= 1, number= 0):
 
     colors = mult* colors
     color = np.zeros((colors.shape[0], 3))
@@ -127,13 +150,14 @@ def visualize_pointcloud( pc, colors, bboxes=None, idx=0, mult= 1, number= 0):
     pcd.colors = open3d.open3d.utility.Vector3dVector(color)
     # for us, it corresponds to class response map
 
-    if bboxes is not None:
+    if pred_bboxes is not None and gt_bboxes is not None:
+        # Predicted bboxes generation
         # Our lines span from points 0 to 1, 1 to 2, 2 to 3, etc...
         lines = [[0, 1], [1, 2], [2, 3], [0, 3],
                  [4, 5], [5, 6], [6, 7], [4, 7],
                  [0, 4], [1, 5], [2, 6], [3, 7]]
         lenght = len(lines)
-        for i in range(len(bboxes)//8-1): #for multiple lines, need to extend lines
+        for i in range(len(pred_bboxes)//8-1): #for multiple lines, need to extend lines
             newlines = [[0,0] for _ in range(lenght)]
             for j in range(lenght):
                 newlines[j][0] = lines[j][0] + (8 * (i+1))
@@ -145,25 +169,36 @@ def visualize_pointcloud( pc, colors, bboxes=None, idx=0, mult= 1, number= 0):
 
         line_set = open3d.open3d.geometry.LineSet()
 
-        line_set.points = open3d.open3d.utility.Vector3dVector(bboxes)
+        line_set.points = open3d.open3d.utility.Vector3dVector(pred_bboxes)
         line_set.lines = open3d.open3d.utility.Vector2iVector(lines)
         line_set.colors = open3d.open3d.utility.Vector3dVector(clrs)
-        open3d.open3d.visualization.draw_geometries([pcd,line_set])
+
+        # Grounth thruth bboxes generation
+        # Our lines span from points 0 to 1, 1 to 2, 2 to 3, etc...
+        gt_lines = [[0, 1], [1, 2], [2, 3], [0, 3],
+                 [4, 5], [5, 6], [6, 7], [4, 7],
+                 [0, 4], [1, 5], [2, 6], [3, 7]]
+        lenght = len(gt_lines)
+        for i in range(len(gt_bboxes)//8-1): #for multiple lines, need to extend lines
+            newlines = [[0,0] for _ in range(lenght)]
+            for j in range(lenght):
+                newlines[j][0] = gt_lines[j][0] + (8 * (i+1))
+                newlines[j][1] = gt_lines[j][1] + (8 * (i+1))
+            # newlines will span 8 to 9, 9 to 10, so on...
+            gt_lines.extend(newlines)
+        # Use the same color for all lines
+        clrs = [[0, 0, 1] for _ in range(len(gt_lines))]
+
+        gt_line_set = open3d.open3d.geometry.LineSet()
+
+        gt_line_set.points = open3d.open3d.utility.Vector3dVector(gt_bboxes)
+        gt_line_set.lines = open3d.open3d.utility.Vector2iVector(gt_lines)
+        gt_line_set.colors = open3d.open3d.utility.Vector3dVector(clrs)
+
+        open3d.open3d.visualization.draw_geometries([pcd, gt_line_set, line_set])
     else:
         open3d.open3d.visualization.draw_geometries([pcd])
 
-    """
-    # To save the visualized point cloud
-    vis = open3d.open3d.visualization.Visualizer()
-    vis.create_window(visible=False)
-    vis.add_geometry(pcd)
-    vis.add_geometry(line_set)
-    vis.update_geometry()
-    vis.poll_events()
-    vis.update_renderer()
-    vis.capture_screen_image("/Users/ezgicakir/Downloads/outputs-3/%s" % number)
-    vis.destroy_window()
-    """
 
 
 def distance( p1, p2, _in3d=False):
@@ -246,10 +281,6 @@ def box_center_to_corner(data,alpha):
         [0, 0, 0, 0, h, h, h, h]])
 
     # Standard 3x3 rotation matrix around the Z axis
-    rotation_matrix = np.array([
-        [np.cos(rotation), -np.sin(rotation), 0.0],
-        [np.sin(rotation), np.cos(rotation), 0.0],
-        [0.0, 0.0, 1.0]])
     angle = -1*(rotation+alpha)
     rotation_matrix = np.array([
         [np.cos(angle), -np.sin(angle), 0.0],
