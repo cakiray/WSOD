@@ -5,7 +5,7 @@ import numba
 import numpy as np
 from scipy.interpolate import interp1d
 #from second.core.non_max_suppression.nms_gpu import rotate_iou_gpu_eval
-from nms_gpu import rotate_iou_gpu_eval
+from .rotate_iou import rotate_iou_gpu_eval
 
 def get_mAP(prec):
     sums = 0
@@ -130,7 +130,7 @@ def bev_box_overlap(boxes, qboxes, criterion=-1):
     return riou
 
 
-@numba.jit(nopython=True, parallel=True)
+@numba.jit(nopython=True, parallel=False)
 def d3_box_overlap_kernel(boxes,
                           qboxes,
                           rinc,
