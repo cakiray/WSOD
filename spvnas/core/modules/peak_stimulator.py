@@ -6,10 +6,15 @@ from core import utils
 
 class PeakStimulation(autograd.Function):
     @staticmethod
-    def forward(ctx, input, win_size, peak_filter, return_aggregation=False):
+    def forward(ctx, input, z_values, win_size, peak_filter, return_aggregation=False):
         ctx.num_flags = 4
         assert win_size % 2 == 1, 'Window size for peak finding must be odd.'
-        
+
+        # amplify Center Response Map values
+        # input is 3-channels torch as 1x1xN
+        # z_values is 3d point clouds forward(z in velo) direction values
+        input = input * z_values
+
         # peak finding by getting peak in windows
         offset = (win_size - 1) // 2
         padding = torch.nn.ConstantPad1d(offset, float('-inf'))
@@ -47,8 +52,8 @@ class PeakStimulation(autograd.Function):
         return (grad_input,) + (None,) * ctx.num_flags
 
 
-def peak_stimulation(input, return_aggregation=True, win_size=3, peak_filter=None):
-    return PeakStimulation.apply(input, win_size, peak_filter, return_aggregation)
+def peak_stimulation(input, z_values, return_aggregation=True, win_size=3, peak_filter=None):
+    return PeakStimulation.apply(input, z_values, win_size, peak_filter, return_aggregation)
     
 def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normalize=False):
     # PRM paper to calculate gradient
