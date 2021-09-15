@@ -33,7 +33,8 @@ class PeakStimulation(autograd.Function):
         if peak_filter:
             mask = input >= peak_filter(input)
             mask_ = input >=peak_threshold
-            peak_map = (peak_map & mask & mask_)
+            mask = mask & mask_
+            peak_map = (peak_map & mask)
         peak_list = torch.nonzero(peak_map)
         ctx.mark_non_differentiable(peak_list)
         
@@ -68,11 +69,11 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     peak_response_maps_con = np.zeros((inputs.F.shape))
     valid_peak_list = []
     avg_sum = 0.0
-    for idx in range(peak_list.size(0)):
+    for idx in range(-1):# range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
         if peak_val > peak_threshold:
             valid_peak_list.append(peak_list[idx,:])
-
+    valid_peak_list = peak_list # peak elimination is in stimulation
     if len(valid_peak_list) == 0:
         return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
     # Further point sampling
