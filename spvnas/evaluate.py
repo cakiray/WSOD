@@ -111,7 +111,7 @@ def main() -> None:
                 outputs_bcn = outputs[None, : , :]
             outputs_bcn = outputs_bcn.permute(0,2,1)
             # peak backpropagation
-            peak_list, aggregation = peak_stimulation(outputs_bcn, return_aggregation=True, win_size=win_size,
+            peak_list, aggregation = peak_stimulation(input=outputs_bcn, z_values=points[:,3], return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
             #print( "peak_Sti peak len", len(peak_list),aggregation)
 
