@@ -59,13 +59,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
     valid_peak_list = []
+    avg_sum = 0.0
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
         if peak_val > peak_threshold:
             valid_peak_list.append(peak_list[idx,:])
 
     if len(valid_peak_list) <= 0:
-        return valid_peak_list, valid_peak_response_map, peak_response_maps_con
+        return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
     # Further point sampling
     # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
     points = np.asarray(inputs.F[:,0:3].detach().cpu())
@@ -108,7 +109,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
                 #print("min max ", mins, maxs)
                 prm[prm==float('inf')] = 0.0
                 prm[prm==float('-inf')] = 0.0
-                prm[prm<0.0005] = 0.0
+                avg_sum += np.mean(prm[prm>0.0])
+                prm[prm<0.001] = 0.0
 
                 #prm = utils.assignAvgofNeighbors(points=inputs.F, prm=prm, k=10)
             #print("center and argmax center point ", points[np.argmax(prm)], points[valid_peak_list[idx][2]])
@@ -139,5 +141,5 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         #print("# of peak responses and shape ", len(peak_response_maps), valid_peak_list.shape, peak_response_maps[0].shape)
     
     
-    return valid_peak_list, valid_peak_response_map, peak_response_maps_con
+    return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
 
