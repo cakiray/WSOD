@@ -366,7 +366,8 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             bbox = bbox.create_from_points(pc_)
 
             volume = bbox.volume()
-            if volume < 1.0: #check volume is compatible with car volumes
+            if volume < 1.5: #check volume is compatible with car volumes
+                print("vol ", file_id , volume)
                 continue
 
             corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
@@ -387,7 +388,8 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             dimensions = max_bound-min_bound
             h, w, l = -dimensions[2], dimensions[0], dimensions[1]
             #cars height, width and length is generally larger than 1.0 mt
-            if h < 1.0 or w < 1.0 or l < 1.0:
+            if h < 1.5 or w < 1.5 or l < 1.5:
+                print("hwl: ", file_id, h, w, l)
                 continue
             x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
             ry = 0 # rotation along y axis is set to 0 for now

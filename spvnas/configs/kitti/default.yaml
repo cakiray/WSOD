@@ -20,10 +20,10 @@ dataset:
   voxel_size: 0.05
   quantization_size: 3
   
-num_epochs: 10
+num_epochs: 15
 prm:
   win_size: 5
-  peak_threshold: 0.3
+  peak_threshold: 0.15
   iou_threshold: 0.3
 
 batch_size: 8
@@ -34,7 +34,7 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /spvnascnn_wd0_lr001_nodrop
 
-outputs: /data/Ezgi/spvnas_cnn-wd0-lr001-nodrop
+outputs: /data/Ezgi/preds
 
 model:
   name: spvnas_cnn

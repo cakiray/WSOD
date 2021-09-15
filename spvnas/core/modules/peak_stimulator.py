@@ -6,15 +6,15 @@ from core import utils
 
 class PeakStimulation(autograd.Function):
     @staticmethod
-    def forward(ctx, input, z_values, win_size, peak_filter, return_aggregation=False):
+    def forward(ctx, input, z_values, peak_threshold, win_size, peak_filter, return_aggregation=False):
         ctx.num_flags = 4
         assert win_size % 2 == 1, 'Window size for peak finding must be odd.'
 
         # amplify Center Response Map values
         # input is 3-channels torch as 1x1xN
         # z_values is 3d point clouds forward(z in velo) direction values
-        input = input * z_values
-
+        input = input * ((z_values) **3)
+        
         # peak finding by getting peak in windows
         offset = (win_size - 1) // 2
         padding = torch.nn.ConstantPad1d(offset, float('-inf'))
@@ -32,34 +32,37 @@ class PeakStimulation(autograd.Function):
         # peak filtering
         if peak_filter:
             mask = input >= peak_filter(input)
-            peak_map = (peak_map & mask)
+            mask_ = input >=peak_threshold
+            peak_map = (peak_map & mask & mask_)
         peak_list = torch.nonzero(peak_map)
         ctx.mark_non_differentiable(peak_list)
         
         if return_aggregation:
             peak_map = peak_map.float()
             ctx.save_for_backward(input, peak_map)
-            return peak_list, (input * peak_map).view( batch_size, num_channels, -1).sum(2) / \
+            
+            return input, peak_list, (input * peak_map).view( batch_size, num_channels, -1).sum(2) / \
                 peak_map.view( batch_size, num_channels, -1).sum(2)
+
         else:
-            return peak_list, None
+            return input, peak_list, None
             
     @staticmethod
-    def backward(ctx, grad_peak_list, grad_output):
+    def backward(ctx, grad_crm, grad_peak_list, grad_output):
         input, peak_map, = ctx.saved_tensors
         _, num_channels, n = input.size()
         grad_input = peak_map * grad_output.view( 1, num_channels,1)
         return (grad_input,) + (None,) * ctx.num_flags
 
 
-def peak_stimulation(input, z_values, return_aggregation=True, win_size=3, peak_filter=None):
-    return PeakStimulation.apply(input, z_values, win_size, peak_filter, return_aggregation)
+def peak_stimulation(input, z_values, peak_threshold, return_aggregation=True, win_size=3, peak_filter=None):
+    return PeakStimulation.apply(input, z_values, peak_threshold, win_size, peak_filter, return_aggregation)
     
 def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normalize=False):
     # PRM paper to calculate gradient
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
-    #print("\nmax and min values in PRM: ", torch.max(outputs), torch.min(outputs))
+    #print("\nmax and min values in CRM",torch.max(outputs).item(), torch.min(outputs).item()) 
 
     valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
@@ -70,7 +73,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         if peak_val > peak_threshold:
             valid_peak_list.append(peak_list[idx,:])
 
-    if len(valid_peak_list) <= 0:
+    if len(valid_peak_list) == 0:
         return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
     # Further point sampling
     # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
@@ -101,6 +104,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             outputs.backward(grad_output, retain_graph=True)
         
             grad = inputs.F.grad # N x input_channel_num
+            
             # PRM is absolute of all channels
             prm = grad.detach().cpu().clone()
             prm = np.asarray(np.absolute( prm )) # shape: N x input_channel_num, 2D
@@ -108,6 +112,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             if normalize:
                 prm = utils.maxpool(prm) #channel no is 1 from now on
                 #mins= np.amin(np.array(prm[prm>0.0]), axis=0)
+                #print(prm[prm>0.0].shape)
                 mins = np.asarray( [ np.amin(prm[prm[:,i]>0.0][:,i]) for i in range(prm.shape[1]) ] )
                 maxs = np.amax(np.array(prm), axis=0)
                 prm = (prm-mins)/(maxs-mins)
