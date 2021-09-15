@@ -89,6 +89,7 @@ def main() -> None:
     count, prec_count,recall_count = 0,0,0
     bbox_p, bbox_r = 0,0
     n,r,p = 0,0,0
+    avg_ = 0.0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
         if True:#n < 10:
             n += 1
@@ -116,18 +117,19 @@ def main() -> None:
             #print( "peak_Sti peak len", len(peak_list),aggregation)
 
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
-            peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs, outputs_bcn, peak_list,
+            peak_list, peak_responses, peak_response_maps_sum, avg = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                                                     peak_threshold=peak_threshold, normalize=True)
-
+            avg_ += avg
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
             calibs = Calibration( calib_file )
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
-            utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
-
-
+            #utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
+            
+            
+            #continue
             bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
             fp_bbox = 0
             #print(f"Valid peak len:{len(peak_list)}, Number of cars: {utils.get_car_num(labels)}")
@@ -177,7 +179,7 @@ def main() -> None:
 
             count += len(peak_list)
 
-            if True:#fp_bbox>0:
+            if False:#fp_bbox>0:
                 out = outputs.cpu()
                 inp_pc = inputs.F.cpu() # input point cloud
                 # concat_in_out.shape[0]x5, first columns are pc, last 1 column is output
@@ -190,6 +192,8 @@ def main() -> None:
 
         else:
             break
+
+    print("avg val of prms: " , avg_/n)
     mbbox_recall /= bbox_r
     mbbox_precision /= bbox_p
 
