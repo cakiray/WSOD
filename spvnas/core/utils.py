@@ -368,7 +368,8 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             volume = bbox.volume()
             if volume < 4.0: #check volume is compatible with car volumes
                 #print("vol ", file_id , volume)
-                continue
+                #continue
+                pass
 
             corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
             np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
@@ -386,11 +387,12 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             min_bound = bbox.get_min_bound()
             max_bound = bbox.get_max_bound()
             dimensions = max_bound-min_bound
-            h, w, l = -dimensions[2], dimensions[0], dimensions[1]
+            h, w, l = dimensions[2], dimensions[0], dimensions[1]
             #cars height, width and length is generally larger than 1.0 mt
             if h > -1.0 or w < 1.0 or l < 1.0:
                 #print("hwl: ", file_id, h, w, l)
-                continue
+                #continue
+                pass
             x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
             ry = 0 # rotation along y axis is set to 0 for now
             beta = np.arctan2(z, x)
@@ -400,7 +402,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             #print('\n\nsonuçç Car', alpha, corners_img[0, 0], corners_img[0, 1], corners_img[0, 2], corners_img[0, 3],
             #      h, w, l, x, y, z, ry, score)
 
-            print('%s -1 -1 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
+            print('%s 0.0 3 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
                   ('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
                    h, w, l, x, y, z, ry, score), file=f)
 
