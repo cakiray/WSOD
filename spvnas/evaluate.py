@@ -128,8 +128,8 @@ def main() -> None:
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
             utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
-            
-            
+
+            """
             continue
             bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
             fp_bbox = 0
@@ -179,7 +179,7 @@ def main() -> None:
                 bbox_p += 1
 
             count += len(peak_list)
-
+            """
             if False:#fp_bbox>0:
                 out = outputs.cpu()
                 inp_pc = inputs.F.cpu() # input point cloud
@@ -195,6 +195,7 @@ def main() -> None:
             break
 
     print("avg val of prms: " , avg_/n)
+    """
     mbbox_recall /= bbox_r
     mbbox_precision /= bbox_p
 
@@ -203,7 +204,7 @@ def main() -> None:
     writer = SummaryWriter(configs.tfevent+configs.tfeventname)
     #writer.add_scalar(f"mBbox_Recall-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_recall, 0)
     #writer.add_scalar(f"mBbox_Precision-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_precision, 0)
-
+    """
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
 if __name__ == '__main__':
