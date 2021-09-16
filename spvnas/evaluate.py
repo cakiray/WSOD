@@ -127,10 +127,10 @@ def main() -> None:
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
-            #utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
+            utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
             
             
-            #continue
+            continue
             bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
             fp_bbox = 0
             #print(f"Valid peak len:{len(peak_list)}, Number of cars: {utils.get_car_num(labels)}")
