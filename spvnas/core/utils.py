@@ -4,6 +4,7 @@ import numpy as np
 import struct
 import open3d
 import torch 
+from nms_gpu import nms_gpu
 
 __all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou',
             'generate_car_masks',  'generate_prm_mask', 'FPS', 'KNN']
@@ -355,56 +356,83 @@ def KNN(points, anchor, k=10):
     return idxs
 
 #https://github.com/sshaoshuai/PointRCNN/blob/1d0dee91262b970f460135252049112d80259ca0/tools/eval_rcnn.py
+def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
+    bboxs_raw = []
+    for i,response in enumerate(peak_responses):
+        mask = response.flatten()>0.0
+        pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
+        bbox = open3d.geometry.AxisAlignedBoundingBox()
+        bbox = bbox.create_from_points(pc_)
+
+        corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
+        np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
+
+        #corners from velodyne to rect
+        np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
+
+        #get center of bbox and convert from velo to rect
+        np_center = bbox.get_center().reshape(1,3) #numpy, 1x3
+        np_center = calibs.project_velo_to_rect(np_center)
+
+        #2D bounding boxes on image
+        corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
+
+        # h->z, w->x, l->y
+        min_bound = bbox.get_min_bound()
+        max_bound = bbox.get_max_bound()
+        dimensions = max_bound-min_bound
+        h, w, l = dimensions[2], dimensions[0], dimensions[1]
+        #cars height, width and length is generally larger than 1.0 mt
+
+        x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
+        ry = 0 # rotation along y axis is set to 0 for now
+        beta = np.arctan2(z, x)
+        alpha = -np.sign(beta) * np.pi / 2 + beta + ry
+        score = crm[peak_list[i][2]].item() * points[peak_list[i][2],0] / 5 # confidence score
+
+        # kitti format is
+        #  type of object 'Car', 'Van', 'Truck', 'Pedestrian', 'Person_sitting', 'Cyclist', 'Tram','Misc' or 'DontCare'
+        #  truncated
+        #  occluded     0 = fully visible, 1 = partly occluded 2 = largely occluded, 3 = unknown
+        #  alpha        Observation angle of object, ranging [-pi..pi]
+        #  bbox         2D bounding box of object in the image, x1,y1,x2,y2 (left,top,right,bottom)
+        #  dimensions   3D object dimensions: height, width, length (in meters)
+        #  location     3D object location x,y,z in camera coordinates (in meters)
+        #  rotation_y   Rotation ry around Y-axis in camera coordinates [-pi..pi]
+        #  score
+        bboxs_raw.append(('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
+                         h, w, l, x, y, z, ry, score))
+
+    return bboxs_raw
+
+def non_maximum_supression(points, crm, peak_list, peak_responses,calibs):
+
+    bboxs_raw = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
+    dets = []
+    for bbox in bboxs_raw:
+        x1 = bbox[3]
+        y1 = bbox[4]
+        x2 = bbox[5]
+        y2 = bbox[6]
+        score = bbox[-1]
+        dets.append([x1,y1,x2,y2,score])
+
+    kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0)
+    return kept_idxs
+
 def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_responses, calibs, labels):
 
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
+    kitti_format_list = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
+    kept_idxs = non_maximum_supression(points, crm, peak_list, peak_responses,calibs)
+    print(f"kept idxs: {kept_idxs}, len kept: {len(kept_idxs)}, len original: {len(peak_list)}")
+
     with open(kitti_output_file, 'w') as f:
-        for i,response in enumerate(peak_responses):
-            mask = response.flatten()>0.0
-            pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
-            bbox = open3d.geometry.AxisAlignedBoundingBox()
-            bbox = bbox.create_from_points(pc_)
-
-            volume = bbox.volume()
-            if volume < 4.0: #check volume is compatible with car volumes
-                #print("vol ", file_id , volume)
-                #continue
-                pass
-
-            corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
-            np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
-        
-            #corners from velodyne to rect
-            np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
-            
-            #get center of bbox and convert from velo to rect
-            np_center = bbox.get_center().reshape(1,3) #numpy, 1x3
-            np_center = calibs.project_velo_to_rect(np_center)
-
-            corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-            
-            # h->z, w->x, l->y
-            min_bound = bbox.get_min_bound()
-            max_bound = bbox.get_max_bound()
-            dimensions = max_bound-min_bound
-            h, w, l = dimensions[2], dimensions[0], dimensions[1]
-            #cars height, width and length is generally larger than 1.0 mt
-            if h > -1.0 or w < 1.0 or l < 1.0:
-                #print("hwl: ", file_id, h, w, l)
-                #continue
-                pass
-            x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
-            ry = 0 # rotation along y axis is set to 0 for now
-            beta = np.arctan2(z, x)
-            alpha = -np.sign(beta) * np.pi / 2 + beta + ry
-            score = crm[peak_list[i][2]].item() # confidence score
-
-            #print('\n\nsonuçç Car', alpha, corners_img[0, 0], corners_img[0, 1], corners_img[0, 2], corners_img[0, 3],
-            #      h, w, l, x, y, z, ry, score)
-
+        #for i,response in enumerate(peak_responses):
+        for idx in kept_idxs:
+            kitti_format = kitti_format_list[idx]
             print('%s 0.0 3 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
-                  ('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
-                   h, w, l, x, y, z, ry, score), file=f)
+                  kitti_format, file=f)
 
             """img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
            img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
