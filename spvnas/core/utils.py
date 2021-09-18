@@ -400,6 +400,8 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         #  location     3D object location x,y,z in camera coordinates (in meters)
         #  rotation_y   Rotation ry around Y-axis in camera coordinates [-pi..pi]
         #  score
+        
+        
         bboxs_raw.append(('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
                          h, w, l, x, y, z, ry, score))
 
@@ -410,14 +412,15 @@ def non_maximum_supression(points, crm, peak_list, peak_responses,calibs):
     bboxs_raw = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
     dets = np.zeros(shape=(len(peak_list), 5))
     for i,bbox in enumerate(bboxs_raw):
-        x1 = bbox[3]
-        y1 = bbox[4]
-        x2 = bbox[5]
-        y2 = bbox[6]
+        x1 = bbox[3]#left (smaller than right)
+        y1 = bbox[6]#bottom (bigger than top)
+        x2 = bbox[5]#right 
+        y2 = bbox[4]#top (smaller than bottom)
         score = bbox[-1]
+        #bottom,top naming is different in nms and kitti format.
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
-    kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0)
+    kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.5, device_id=0)
     return kept_idxs
 
 def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_responses, calibs, labels):
@@ -425,10 +428,9 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     kitti_format_list = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
     kept_idxs = non_maximum_supression(points, crm, peak_list, peak_responses,calibs)
-    print(f"kept idxs: {kept_idxs}, len kept: {len(kept_idxs)}, len original: {len(peak_list)}")
+    #print(f"\n len kept: {len(kept_idxs)}, len original: {len(peak_list)}")
 
     with open(kitti_output_file, 'w') as f:
-        #for i,response in enumerate(peak_responses):
         for idx in kept_idxs:
             kitti_format = kitti_format_list[idx]
             print('%s 0.0 3 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
