@@ -408,14 +408,14 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
 def non_maximum_supression(points, crm, peak_list, peak_responses,calibs):
 
     bboxs_raw = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
-    dets = []
-    for bbox in bboxs_raw:
+    dets = np.zeros(shape=(len(peak_list), 5))
+    for i,bbox in enumerate(bboxs_raw):
         x1 = bbox[3]
         y1 = bbox[4]
         x2 = bbox[5]
         y2 = bbox[6]
         score = bbox[-1]
-        dets.append([x1,y1,x2,y2,score])
+        dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0)
     return kept_idxs
