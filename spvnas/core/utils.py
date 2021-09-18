@@ -4,7 +4,7 @@ import numpy as np
 import struct
 import open3d
 import torch 
-from nms_gpu import nms_gpu
+from core.nms_gpu import nms_gpu
 
 __all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou',
             'generate_car_masks',  'generate_prm_mask', 'FPS', 'KNN']
