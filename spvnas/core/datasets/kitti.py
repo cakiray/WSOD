@@ -247,7 +247,7 @@ class KITTIInternal:
     def __getitem__(self, index):
         pc_file = open ( self.pcs[index], 'rb')        
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
-        front_idxs = block_[:,0]>=0
+        front_idxs = block_[:,0]>0
         block_ = block_[front_idxs]
 
         if self.input_channels == 5:
