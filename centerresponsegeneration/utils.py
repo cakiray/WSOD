@@ -53,6 +53,8 @@ def read_car_labels( label_path, idx=None):
 
     return np.asarray(new_labels)
 
+
+
 def read_points( lidar_path, idx):
 
     path = os.path.join(lidar_path, '%06d.bin' % idx)
@@ -267,6 +269,29 @@ def get_bboxes( labels, calibs):
 
     return bboxes
 
+
+
+def get_bboxes_vol_count(labels, calibs):
+    bboxes = []
+    volume =0.0
+    for data in labels:
+        if data['type'] != b'DontCare':
+            h = data['h'] # box height
+            w = data['w'] # box width
+            l = data['l']  # box length (in meters)
+            x = data['x']
+            y = data['y']
+            z = data['z']
+            ry = data['rotation_y']
+            alpha = data['alpha']
+            xyz = calibs.project_rect_to_velo(np.array([[x,y,z]]))
+
+            t = (xyz[0][0], xyz[0][1], xyz[0][2])  # location (x,y,z) in camera coord.
+            # yaw angle (around Y-axis in camera coordinates) [-pi..pi]
+            bbox = [h,w,l,t,ry]
+            vol = h*w*l
+            volume += vol
+    return volume, len(labels)
 def box_center_to_corner(data,alpha):
     # To return
     corner_boxes = np.zeros((8, 3))
