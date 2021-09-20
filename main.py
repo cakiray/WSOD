@@ -3,13 +3,12 @@ from centerresponsegeneration.utils import *
 import torch
 import numpy as np
 from centerresponsegeneration.config import *
-from centerresponsegeneration.utils import *
 from centerresponsegeneration.calibration import Calibration
 from spvnas.core.utils import *
+
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-
-    root = "/Users/ezgicakir/Downloads/preds"
+    root = "/Users/ezgicakir/Downloads/log"
     filenames = os.listdir(root)
 
     for file in filenames:
@@ -31,16 +30,20 @@ if __name__ == '__main__':
             pred_bboxes = get_bboxes(labels=pred_lines, calibs=calibs)
 
             out = np.load( os.path.join(root, file))#.astype(float)
-            mask = out[:,0]>0.0
-            out = out[mask]
-            pc = out[:,0:4]
-            out = out[:,-1].reshape(-1,1)
 
+            import math
+            pc = out[:,0:4]
+            print(np.min(pc[:,0]), np.max(pc[:,0]))
+            out = out[:,-1].reshape(-1,1)
+            out *= (np.log(pc[:,0])).reshape(-1,1) #(np.log(pc[:,0])/math.log(5,10))
             print("file: ", file)
             print("output limits: ", np.max(out), np.min(out))
             #out = generate_prm_mask(out)
-
-            visualize_pointcloud( pc, out, pred_bboxes=pred_bboxes, gt_bboxes=gt_bboxes, mult=10, idx=0)
+            mask = (out>=0.7).flatten()
+            mask=mask.flatten()
+            pc = pc[mask]
+            out = out[mask]
+            visualize_pointcloud( pc, out, pred_bboxes=pred_bboxes, gt_bboxes=gt_bboxes, mult=1, idx=0)
 
             for i in range(-10):
                 prm_file = os.path.join(root, file.replace('.npy', f'_prm_{i}.npy'))
