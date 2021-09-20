@@ -23,7 +23,7 @@ dataset:
 num_epochs: 15
 prm:
   win_size: 5
-  peak_threshold: 0.15
+  peak_threshold: 0.7
   iou_threshold: 0.3
 
 batch_size: 8
@@ -34,7 +34,7 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /spvnascnn_wd0_lr001_nodrop
 
-outputs: /data/Ezgi/preds
+outputs: /data/Ezgi/19-09-14-00
 
 model:
   name: spvnas_cnn

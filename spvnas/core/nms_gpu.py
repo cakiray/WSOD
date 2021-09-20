@@ -81,6 +81,7 @@ def nms_kernel(n_boxes, nms_overlap_thresh, dev_boxes, dev_mask):
         for i in range(start, col_size):
             iou = iou_device(dev_boxes[cur_box_idx * 5:cur_box_idx * 5 + 4],
                              block_boxes[i * 5:i * 5 + 4])
+            
             if (iou > nms_overlap_thresh):
                 t |= 1 << i
         col_blocks = ((n_boxes) // (threadsPerBlock) + (

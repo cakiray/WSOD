@@ -388,8 +388,8 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         ry = 0 # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
-        score = crm[peak_list[i][2]].item() * points[peak_list[i][2],0] / 5 # confidence score
-
+        #score = crm[peak_list[i][2]].item() * points[peak_list[i][2],0] / 5 # confidence score
+        score = (crm[peak_list[i][2]].item()+ response[peak_list[i][2]] )/2 # np.log( points[peak_list[i][2],0])
         # kitti format is
         #  type of object 'Car', 'Van', 'Truck', 'Pedestrian', 'Person_sitting', 'Cyclist', 'Tram','Misc' or 'DontCare'
         #  truncated

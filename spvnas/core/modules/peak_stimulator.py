@@ -1,4 +1,5 @@
 import torch
+import math
 import numpy as np
 import torch.nn.functional as F
 from torch import autograd
@@ -13,7 +14,9 @@ class PeakStimulation(autograd.Function):
         # amplify Center Response Map values
         # input is 3-channels torch as 1x1xN
         # z_values is 3d point clouds forward(z in velo) direction values
-        input = input * ((z_values) **3)
+        base = 10
+       
+        input = input * ( torch.log(z_values+1e-5))#/math.log(5,10)) # log_5(z)
         
         # peak finding by getting peak in windows
         offset = (win_size - 1) // 2
@@ -64,7 +67,9 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
     #print("\nmax and min values in CRM",torch.max(outputs).item(), torch.min(outputs).item()) 
-
+    #crmlog = outputs * torch.log(inputs.F[:,0]+1e-5)
+    #print("\nmax and min values in CRM log",torch.max(crmlog).item(), torch.min(crmlog).item()) 
+    
     valid_peak_response_map = []
     peak_response_maps_con = np.zeros((inputs.F.shape))
     valid_peak_list = []
@@ -79,7 +84,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     # Further point sampling
     # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
     points = np.asarray(inputs.F[:,0:3].detach().cpu())
-    peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
+    #peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
 
     #for idx in range(peak_list.size(0)):
     for idx in range(len(valid_peak_list)):

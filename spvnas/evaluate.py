@@ -112,14 +112,15 @@ def main() -> None:
                 outputs_bcn = outputs[None, : , :]
             outputs_bcn = outputs_bcn.permute(0,2,1)
             # peak backpropagation
-            _outputs_bcn, peak_list, aggregation = peak_stimulation(input=outputs_bcn, z_values=inputs.F[:,0], peak_threshold=peak_threshold, return_aggregation=True, win_size=win_size,
+            _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, z_values=inputs.F[:,0], peak_threshold=peak_threshold, return_aggregation=True, win_size=win_size,
                                                       peak_filter=model.module.mean_filter)
-            #print( "peak_Sti peak len", len(peak_list),aggregation)
+            #print( "\nPeak len", len(peak_list),aggregation.item())
             
             #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
             
             peak_list, peak_responses, peak_response_maps_sum, avg = prm_backpropagation(inputs, outputs_bcn, peak_list,
                                                                                     peak_threshold=peak_threshold, normalize=True)
+            #print(f"Second peak list len: {len(peak_list)}")
             avg_ += avg
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
             calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
@@ -180,16 +181,16 @@ def main() -> None:
 
             count += len(peak_list)
             """
-            if False:#fp_bbox>0:
+            if True:#fp_bbox>0:
                 out = outputs.cpu()
                 inp_pc = inputs.F.cpu() # input point cloud
                 # concat_in_out.shape[0]x5, first columns are pc, last 1 column is output
                 concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1)
                 np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
                 
-                for i in range(len(peak_responses)):
-                    prm = peak_responses[i]
-                    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
+                #for i in range(len(peak_responses)):
+                #    prm = peak_responses[i]
+                #    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
 
         else:
             break
