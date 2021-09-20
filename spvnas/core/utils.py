@@ -4,7 +4,7 @@ import numpy as np
 import struct
 import open3d
 import torch 
-from core.nms_gpu import nms_gpu
+#from core.nms_gpu import nms_gpu
 
 __all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou',
             'generate_car_masks',  'generate_prm_mask', 'FPS', 'KNN']
@@ -325,7 +325,7 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     new_peak_centers = []
     new_valid_peak_list = []
     new_valid_indexes = []
-
+    #Eliminate points close each other more that 2.5 mt
     for i,center in enumerate(peak_centers):
         far = True
         for new_center in new_peak_centers:
@@ -342,7 +342,6 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     return np.asarray(new_peak_centers), np.asarray(new_valid_peak_list), np.asarray(new_valid_indexes)
 
 def L2dist_2d(p1, p2):
-
     return math.sqrt( (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 )
 
 def KNN(points, anchor, k=10):
@@ -356,6 +355,7 @@ def KNN(points, anchor, k=10):
     return idxs
 
 #https://github.com/sshaoshuai/PointRCNN/blob/1d0dee91262b970f460135252049112d80259ca0/tools/eval_rcnn.py
+#KITTI format of bounding box of instances
 def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     bboxs_raw = []
     for i,response in enumerate(peak_responses):
@@ -366,23 +366,20 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
 
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
-
         #corners from velodyne to rect
         np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
+        #2D bounding box's corners location on image
+        corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3
-        np_center = calibs.project_velo_to_rect(np_center)
-
-        #2D bounding boxes on image
-        corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
+        np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> x,z,y in rect
 
         # h->z, w->x, l->y
         min_bound = bbox.get_min_bound()
         max_bound = bbox.get_max_bound()
-        dimensions = max_bound-min_bound
+        dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
         h, w, l = dimensions[2], dimensions[0], dimensions[1]
-        #cars height, width and length is generally larger than 1.0 mt
 
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
         ry = 0 # rotation along y axis is set to 0 for now
@@ -408,23 +405,24 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     return bboxs_raw
 
 def non_maximum_supression(points, crm, peak_list, peak_responses,calibs):
-
     bboxs_raw = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
     dets = np.zeros(shape=(len(peak_list), 5))
+
     for i,bbox in enumerate(bboxs_raw):
         x1 = bbox[3]#left (smaller than right)
         y1 = bbox[6]#bottom (bigger than top)
-        x2 = bbox[5]#right 
+        x2 = bbox[5]#right (bigger than left)
         y2 = bbox[4]#top (smaller than bottom)
         score = bbox[-1]
         #bottom,top naming is different in nms and kitti format.
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
-    #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0)
+    #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
     kept_idxs = nms_cpu(dets, thresh=0.5)
 
     return kept_idxs
 
+#cpu base NMS algorithm
 def nms_cpu(dets, thresh, eps=0.0):
     x1 = dets[:, 0]
     y1 = dets[:, 1]
@@ -486,6 +484,7 @@ def assignAvgofNeighbors(points, prm, k=10):
 
     return prm
 
+# maxpool of Peak Response Map columns
 def maxpool(prm):
     new_prm = np.amax(prm,axis=1).reshape(-1,1) #maxs columns-wise
     return new_prm
