@@ -67,11 +67,13 @@ def spvnas_cnn(pretrained=False, **kwargs):
     #model.remove_skipconnection()
     if pretrained:
         dict_ = torch.load(kwargs['weights'])['model']
+        model.load_state_dict(dict_)
+        """
         dict_correct_naming = dict()
         for key in dict_:
             dict_correct_naming[key.replace('module.','')] = dict_[key]
         model.load_state_dict(dict_correct_naming)
-
+        """
     return model
 
 def spvnas_specialized(net_id, pretrained=True,  **kwargs):

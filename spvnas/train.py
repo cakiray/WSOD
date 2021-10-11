@@ -88,7 +88,10 @@ def main() -> None:
         model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         model.train()
     elif 'spvnas_cnn'== configs.model.name:
-        model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        if args.weights is not None:
+            model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, weights=args.weights, pretrained=True)
+        else:
+            model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         model.train()
     else:
         raise NotImplementedError
