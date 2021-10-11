@@ -160,6 +160,9 @@ class KITTIInternal:
         self.planes = []
         self.labels = []
         self.calibs = []
+
+        # weakly annotated data loader
+        """
         if split == 'train':
             train_idxs = open( os.path.join(root, txt_path, "train.txt") ).readlines()
             for idx in train_idxs:
@@ -191,12 +194,29 @@ class KITTIInternal:
                 self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
 
-
-        """elif split=='test':
-            files = os.listdir(os.path.join(root, self.data_path) )
-            for name in files:
-                self.pcs.append(self.root + self.data_path + "/" + name)
         """
+        # fully annotated data loader
+        if split == 'train':
+            for idx in range(500):
+                self.pcs.append(os.path.join( self.root, self.data_path ,'%06d.bin' % idx))
+                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%06d.npy' % idx))
+                self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
+                self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
+                self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
+        elif split=="valid":
+            for idx in range(500,550):
+                self.pcs.append(os.path.join(self.root, self.data_path, '%06d.bin' % idx))
+                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%06d.npy' % idx))
+                self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
+                self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
+                self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
+        elif split=="test":
+            for idx in range(550,1000):
+                self.pcs.append(os.path.join(self.root, self.data_path, '%06d.bin' % idx))
+                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%06d.npy' % idx))
+                self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
+                self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
+                self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
 
     def set_angle(self, angle):
         self.angle = angle
