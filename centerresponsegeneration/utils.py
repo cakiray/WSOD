@@ -2,7 +2,7 @@ import os
 import numpy as np
 import struct
 import open3d
-from .calibration import *
+from calibration import *
 
 def load_pc(f):
     file = open(f, 'rb')
@@ -136,6 +136,49 @@ def visualize_pointcloud_orig( pc, boxes=None):
     else:
         open3d.open3d.visualization.draw_geometries([pcd])
 
+def visualize_pointcloud_1bbox( pc, colors, bboxes=None, mult = 1, idx=0):
+
+    colors = mult* colors
+    color = np.zeros((colors.shape[0], 3))
+    if len(colors.shape) >1 and colors.shape[1]==1:
+        color[:,idx] = colors[:,0]
+    elif len(colors.shape) >1 and colors.shape[1]>1:
+        color = colors[:,0:3]
+    else:
+        color[:,idx] = colors
+
+    pcd=open3d.open3d.geometry.PointCloud()
+    pcd.points= open3d.open3d.utility.Vector3dVector(pc[:, 0:3])
+    pcd.colors = open3d.open3d.utility.Vector3dVector(color)
+    # for us, it corresponds to class response map
+
+    if bboxes is not None:
+        # Predicted bboxes generation
+        # Our lines span from points 0 to 1, 1 to 2, 2 to 3, etc...
+        lines = [[0, 1], [1, 2], [2, 3], [0, 3],
+                 [4, 5], [5, 6], [6, 7], [4, 7],
+                 [0, 4], [1, 5], [2, 6], [3, 7]]
+        lenght = len(lines)
+        for i in range(len(bboxes)//8-1): #for multiple lines, need to extend lines
+            newlines = [[0,0] for _ in range(lenght)]
+            for j in range(lenght):
+                newlines[j][0] = lines[j][0] + (8 * (i+1))
+                newlines[j][1] = lines[j][1] + (8 * (i+1))
+            # newlines will span 8 to 9, 9 to 10, so on...
+            lines.extend(newlines)
+        # Use the same color for all lines
+        clrs = [[0, 1, 0] for _ in range(len(lines))]
+
+        line_set = open3d.open3d.geometry.LineSet()
+
+        line_set.points = open3d.open3d.utility.Vector3dVector(bboxes)
+        line_set.lines = open3d.open3d.utility.Vector2iVector(lines)
+        line_set.colors = open3d.open3d.utility.Vector3dVector(clrs)
+        open3d.open3d.visualization.draw_geometries([pcd, line_set])
+    else:
+        open3d.open3d.visualization.draw_geometries([pcd])
+
+
 def visualize_pointcloud( pc, colors, pred_bboxes=None, gt_bboxes=None, idx=0, mult= 1, number= 0):
 
     colors = mult* colors
@@ -248,29 +291,6 @@ def substact_1(data):
     return data.reshape(-1,1)
 
 
-def get_bboxes( labels, calibs):
-    bboxes = []
-    for data in labels:
-        if data['type'] != b'DontCare':
-            h = data['h'] # box height
-            w = data['w'] # box width
-            l = data['l']  # box length (in meters)
-            x = data['x']
-            y = data['y']
-            z = data['z']
-            ry = data['rotation_y']
-            alpha = data['alpha']
-            xyz = calibs.project_rect_to_velo(np.array([[x,y,z]]))
-
-            t = (xyz[0][0], xyz[0][1], xyz[0][2])  # location (x,y,z) in camera coord.
-            # yaw angle (around Y-axis in camera coordinates) [-pi..pi]
-            bbox = [h,w,l,t,ry]
-            bboxes.extend(box_center_to_corner(bbox,alpha))
-
-    return bboxes
-
-
-
 def get_bboxes_vol_count(labels, calibs):
     bboxes = []
     volume =0.0
@@ -292,31 +312,54 @@ def get_bboxes_vol_count(labels, calibs):
             vol = h*w*l
             volume += vol
     return volume, len(labels)
-def box_center_to_corner(data,alpha):
-    # To return
-    corner_boxes = np.zeros((8, 3))
 
+
+def box_center_to_corner(data, calibs):
+    #First rotate and transform in camera position,
+    # then convert from camera to velodyne coords.
     translation = data[3]
     h, w, l = data[0], data[1], data[2]
     rotation = data[4]
+
     # Create a bounding box outline
     bounding_box = np.array([
-        [-l/2, -l/2, l/2, l/2, -l/2, -l/2, l/2, l/2],
-        [w/2, -w/2, -w/2, w/2, w/2, -w/2, -w/2, w/2],
-        [0, 0, 0, 0, h, h, h, h]])
+        [l/2, l/2, -l/2, -l/2, l/2, l/2, -l/2, -l/2],
+        [0, 0, 0, 0, -h, -h, -h, -h],
+        [w/2, -w/2, -w/2, w/2, w/2, -w/2, -w/2, w/2]
+    ])
 
-    # Standard 3x3 rotation matrix around the Z axis
-    angle = -1*(rotation+alpha)
+    # Standard 3x3 rotation matrix around the Y axis in camera coords.
     rotation_matrix = np.array([
-        [np.cos(angle), -np.sin(angle), 0.0],
-        [np.sin(angle), np.cos(angle), 0.0],
-        [0.0, 0.0, 1.0]])
-    print("rot, alpha" , rotation, alpha)
-    # Repeat the [x, y, z] eight times
+        [np.cos(rotation),0.0, np.sin(rotation)],
+        [0.0, 1.0, 0.0],
+        [-np.sin(rotation), 0.0, np.cos(rotation)]])
+
     eight_points = np.tile(translation, (8, 1))
 
     # Translate the rotated bounding box by the
     # original center position to obtain the final box
-    corner_box = np.dot(rotation_matrix, bounding_box) + eight_points.transpose()
-    #corner_box = bounding_box + eight_points.transpose()
-    return corner_box.transpose()
+    corner_box = np.dot(rotation_matrix, bounding_box ).T+ eight_points
+    for i in range(len(corner_box)):
+        # convert corners to velodyne coords.
+        corner_box[i]= calibs.project_rect_to_velo(np.array([corner_box[i]]))
+    return corner_box
+
+def get_bboxes( labels, calibs):
+    bboxes = []
+    for data in labels:
+        if data['type'] != b'DontCare':
+            h = data['h'] # box height
+            w = data['w'] # box width
+            l = data['l']  # box length (in meters)
+            x = data['x']
+            y = data['y']
+            z = data['z']
+            ry = data['rotation_y'] # yaw angle (around Y-axis in camera coordinates) [-pi..pi]
+            xyz = np.array([[x,y,z]])
+            t = (xyz[0][0], xyz[0][1], xyz[0][2])  # location (x,y,z) in camera coord.
+
+            bbox = [h,w,l,t,ry]
+            bboxes.extend(box_center_to_corner(bbox, calibs))
+
+    return bboxes
+
