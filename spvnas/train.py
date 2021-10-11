@@ -88,9 +88,10 @@ def main() -> None:
         model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         model.train()
     elif 'spvnas_cnn'== configs.model.name:
-        if args.weights is not None:
-            model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, weights=args.weights, pretrained=True)
-        else:
+        #if args.weights is not None:
+        #    model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, weights=args.weights, pretrained=True)
+        #else:
+        if True:
             model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         model.train()
     else:
@@ -119,7 +120,8 @@ def main() -> None:
                                seed=configs.train.seed,
                                out_save_dir=configs.outputs,
                                tfevent=configs.tfevent,
-                               tfeventname=configs.tfeventname)
+                               tfeventname=configs.tfeventname,
+                                checkpoint=args.weights)
 
     t1_start = perf_counter()
 

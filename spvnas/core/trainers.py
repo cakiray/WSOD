@@ -14,7 +14,7 @@ class SemanticKITTITrainer(Trainer):
     def __init__(self, model: nn.Module, criterion: Callable,
                  optimizer: Optimizer, scheduler: Scheduler,
                  num_workers: int, seed: int, out_save_dir: str,
-                 tfevent:str=None, tfeventname:str=None) -> None:
+                 tfevent:str=None, tfeventname:str=None, checkpoint=None) -> None:
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -25,6 +25,7 @@ class SemanticKITTITrainer(Trainer):
         self.out_save_dir = out_save_dir
         self.tfevent = tfevent
         self.tfeventname = tfeventname
+        self.checkpoint = checkpoint
 
     def _before_epoch(self) -> None:
         self.model.train()
@@ -93,15 +94,21 @@ class SemanticKITTITrainer(Trainer):
         state_dict['model'] = self.model.state_dict()
         state_dict['optimizer'] = self.optimizer.state_dict()
         state_dict['scheduler'] = self.scheduler.state_dict()
+        state_dict['epoch'] = self.epoch_num
         return state_dict
 
     def _load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self.model.load_state_dict(state_dict['model'])
         self.optimizer.load_state_dict(state_dict['optimizer'])
         self.scheduler.load_state_dict(state_dict['scheduler'])
-        
+
     def _load_previous_checkpoint(self, checkpoint_path: str) -> None:
         pass
+
+    def _before_train(self) -> None:
+        if self.checkpoint is not None:
+            checkpoint = torch.load(self.checkpoint)
+            self.load_state_dict(checkpoint)
 
     def _before_step(self, feed_dict: Dict[str, Any]) -> None:
         """
