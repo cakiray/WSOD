@@ -66,9 +66,6 @@ def spvnas_cnn(pretrained=False, **kwargs):
     #model.shrink()
     #model.remove_skipconnection()
     if pretrained:
-
-        model.load_state_dict(kwargs['weights'])
-
         dict_ = torch.load(kwargs['weights'])['model']
         dict_correct_naming = dict()
         for key in dict_:
