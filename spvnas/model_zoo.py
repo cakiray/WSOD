@@ -68,6 +68,7 @@ def spvnas_cnn(pretrained=False, **kwargs):
     if pretrained:
         dict_ = torch.load(kwargs['weights'])['model']
         model.load_state_dict(dict_)
+        print("Model weights are loaded.")
         """
         dict_correct_naming = dict()
         for key in dict_:
