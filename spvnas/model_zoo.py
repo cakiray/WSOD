@@ -184,7 +184,7 @@ def spvcnn(net_id, pretrained=True, **kwargs):
         pres=net_config['pres'],
         vres=net_config['vres']
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
-
+    model = model.change_last_layer(num_classes)
     if pretrained:
         if kwargs['weights'] is not None:
             dict_ = torch.load(kwargs['weights'])['model']
@@ -196,6 +196,7 @@ def spvcnn(net_id, pretrained=True, **kwargs):
             download_url(url_base + net_id + '/init', model_dir='.torch/spvcnn/%s/' % net_id),
             map_location='cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu'
         )['model']
+        
         model.load_state_dict(init)
     return model
 
