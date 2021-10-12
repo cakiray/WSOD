@@ -1,5 +1,6 @@
 # This is a sample Python script.
-from centerresponsegeneration.utils import *
+from centerresponsegeneration.utils import visualize_pointcloud, read_car_labels
+import os
 import torch
 import numpy as np
 from centerresponsegeneration.config import *
@@ -8,7 +9,7 @@ from spvnas.core.utils import *
 
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    root = "/Users/ezgicakir/Downloads/log"
+    root = "/Users/ezgicakir/Downloads/fullyannotpreds"
     filenames = os.listdir(root)
 
     for file in filenames:
@@ -20,6 +21,7 @@ if __name__ == '__main__':
             calibs = Calibration( os.path.join(root_dir, calib_train_path), file.replace('npy', 'txt'))
 
             gt_label_file = os.path.join(root_dir, labels_path, file.replace('npy', 'txt'))
+            #gt_label_file = os.path.join('/Users/ezgicakir/Desktop/pvrcnn_kitti_preds/pvrcnn_kitti_preds/val', file.replace('npy', 'txt'))
             pred_label_file = os.path.join(root, file.replace('npy', 'txt'))
 
             gt_lines = read_labels( gt_label_file)
@@ -34,15 +36,16 @@ if __name__ == '__main__':
             import math
             pc = out[:,0:4]
             print(np.min(pc[:,0]), np.max(pc[:,0]))
-            out = out[:,-1].reshape(-1,1)
-            out *= (np.log(pc[:,0])).reshape(-1,1) #(np.log(pc[:,0])/math.log(5,10))
+            out = out[:,-1].reshape(-1,1) + 1e-10
+            out *= (np.log(pc[:,0]+1e-5)).reshape(-1,1) #(np.log(pc[:,0])/math.log(5,10))
             print("file: ", file)
             print("output limits: ", np.max(out), np.min(out))
             #out = generate_prm_mask(out)
-            mask = (out>=0.7).flatten()
+            mask = (out>0.0).flatten()
             mask=mask.flatten()
             pc = pc[mask]
             out = out[mask]
+            #Preds are in green, ground truth are in blue
             visualize_pointcloud( pc, out, pred_bboxes=pred_bboxes, gt_bboxes=gt_bboxes, mult=1, idx=0)
 
             for i in range(-10):

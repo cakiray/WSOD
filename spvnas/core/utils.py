@@ -404,9 +404,8 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
 
     return bboxs_raw
 
-def non_maximum_supression(points, crm, peak_list, peak_responses,calibs):
-    bboxs_raw = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
-    dets = np.zeros(shape=(len(peak_list), 5))
+def non_maximum_supression(bboxs_raw):
+    dets = np.zeros(shape=(len(bboxs_raw), 5))
 
     for i,bbox in enumerate(bboxs_raw):
         x1 = bbox[3]#left (smaller than right)
@@ -458,7 +457,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
 
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     kitti_format_list = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
-    kept_idxs = non_maximum_supression(points, crm, peak_list, peak_responses,calibs)
+    kept_idxs = non_maximum_supression(kitti_format_list)
     #print(f"\n len kept: {len(kept_idxs)}, len original: {len(peak_list)}")
 
     with open(kitti_output_file, 'w') as f:
