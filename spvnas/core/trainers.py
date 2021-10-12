@@ -108,7 +108,7 @@ class SemanticKITTITrainer(Trainer):
     def _before_train(self) -> None:
         if self.checkpoint is not None:
             checkpoint = torch.load(self.checkpoint)
-            print("/ncheckpoint:", checkpoint)
+            #print("/ncheckpoint:", checkpoint)
             self.load_state_dict(checkpoint)
 
     def _before_step(self, feed_dict: Dict[str, Any]) -> None:
