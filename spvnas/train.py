@@ -87,7 +87,8 @@ def main() -> None:
         if args.weights is None:
             model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         else:
-            model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=True, weights = args.weights)
+            model = spvcnn(args.name, num_classes=configs.data.num_classes, pretrained=True, weights = args.weights)
+            model.change_last_layer()
 
         model.train()
     elif 'spvnas_cnn'== configs.model.name:
