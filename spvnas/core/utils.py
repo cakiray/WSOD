@@ -364,24 +364,25 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
 
+        #get center of bbox and convert from velo to rect
+        np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
+        np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
+        """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
         #corners from velodyne to rect
         np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
         #2D bounding box's corners location on image
+        """
+        np_corners = get_corners(np_center) # in rect coord
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-
-        #get center of bbox and convert from velo to rect
-        np_center = bbox.get_center().reshape(1,3) #numpy, 1x3
-        np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> x,z,y in rect
 
         # h->z, w->x, l->y
         min_bound = bbox.get_min_bound()
         max_bound = bbox.get_max_bound()
         dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
-        h, w, l = dimensions[2], dimensions[0], dimensions[1]
-
-        x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2]
+        w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
+        x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
         ry = 0 # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
@@ -403,6 +404,20 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
                          h, w, l, x, y, z, ry, score))
 
     return bboxs_raw
+
+def get_corners(center): #center is numpy array in rect coords, [x,y,z]
+    #average dimensions of a car
+    h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
+    x,y,z = center[0,0], center[0,1], center[0,2]
+    corners = np.asarray([[x+h/2, y+w/2, z-l/2],
+                        [x+h/2, y+w/2, z+l/2],
+                        [x-h/2, y+w/2, z-l/2],
+                        [x+h/2, y-w/2, z-l/2],
+                        [x-h/2, y-w/2, z+l/2],
+                        [x-h/2, y-w/2, z-l/2],
+                        [x+h/2, y-w/2, z+l/2],
+                        [x-h/2, y+w/2, z+l/2]])
+    return corners
 
 def non_maximum_supression(bboxs_raw):
     dets = np.zeros(shape=(len(bboxs_raw), 5))
