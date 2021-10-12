@@ -386,7 +386,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         #dimension are of prototype
         h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
-        ry = 0 # rotation along y axis is set to 0 for now
+        ry = np.pi/2 # pi/2 works prototype placing in general # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
         #score = crm[peak_list[i][2]].item() * points[peak_list[i][2],0] / 5 # confidence score
