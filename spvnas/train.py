@@ -84,15 +84,14 @@ def main() -> None:
         model.train()
         model = model.change_last_layer(configs.data.num_classes)
     elif 'spvcnn'== configs.model.name:
-        #model = myspvcnn(configs=configs, pretrained=False)
-        model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        if args.weights is None:
+            model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        else:
+            model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=True, weights = args.weights)
+
         model.train()
     elif 'spvnas_cnn'== configs.model.name:
-        #if args.weights is not None:
-        #    model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, weights=args.weights, pretrained=True)
-        #else:
-        if True:
-            model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         model.train()
     else:
         raise NotImplementedError

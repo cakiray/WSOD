@@ -186,7 +186,13 @@ def spvcnn(net_id, pretrained=True, **kwargs):
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
 
     if pretrained:
-        init = torch.load(
+        if kwargs['weights'] is not None:
+            dict_ = torch.load(kwargs['weights'])['model']
+            init = dict()
+            for key in dict_:
+                init[key.replace('module.','')] = dict_[key]
+        else:
+            init = torch.load(
             download_url(url_base + net_id + '/init', model_dir='.torch/spvcnn/%s/' % net_id),
             map_location='cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu'
         )['model']
@@ -208,39 +214,14 @@ def spvcnn_specialized(net_id, pretrained=True,  **kwargs):
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
 
     model.manual_select(net_config)
-    print("next model ", model)
     model = model.determinize()
 
     if pretrained:
-
         dict_ = torch.load(kwargs['weights'])['model']
         dict_correct_naming = dict()
         for key in dict_:
             dict_correct_naming[key.replace('module.','')] = dict_[key]
         model.load_state_dict(dict_correct_naming)
 
-
     return model
 
-def myspvcnn(configs, pretrained = False, weights=None, **kwargs):
-
-    if 'cr' in configs.model:
-        cr = configs.model.cr
-    else:
-        cr = 1.0
-    model = SPVCNN(
-        input_channels= configs.data.input_channels,
-        num_classes= configs.data.num_classes,
-        cr=cr,
-        pres=configs.dataset.voxel_size,
-        vres=configs.dataset.voxel_size
-    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
-
-    if pretrained:
-        dict_ = torch.load(weights)['model']
-        dict_correct_naming = dict()
-        for key in dict_:
-            dict_correct_naming[key.replace('module.','')] = dict_[key]
-        model.load_state_dict(dict_correct_naming)
-
-    return model
