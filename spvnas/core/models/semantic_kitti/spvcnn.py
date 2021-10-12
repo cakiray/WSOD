@@ -230,7 +230,7 @@ class SPVCNN(nn.Module):
         for name, module in self.named_modules():
             module.requires_grad_(True)
         # change last classifier layer's output channel and make it trainable, by default
-        self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
+        self.classifier = nn.Sequential(nn.Linear(self.cs[8],num_classes))
         self.classifier.set_output_channel(num_classes)
         return self
                 
