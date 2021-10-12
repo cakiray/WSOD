@@ -51,7 +51,7 @@ def fully_annot_crm():
     full_annot_path ='/data/Ezgi/fully_annot_crm'
 
     vehicles = [ b'Car']
-    N = 500#len( os.listdir( os.path.join( root_dir, labels_path)) )
+    N = 1000#len( os.listdir( os.path.join( root_dir, labels_path)) )
 
     for idx in range(N):
         print(idx)

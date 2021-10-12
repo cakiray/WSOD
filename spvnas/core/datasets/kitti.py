@@ -162,7 +162,7 @@ class KITTIInternal:
         self.calibs = []
 
         # weakly annotated data loader
-        """
+        
         if split == 'train':
             train_idxs = open( os.path.join(root, txt_path, "train.txt") ).readlines()
             for idx in train_idxs:
@@ -217,7 +217,7 @@ class KITTIInternal:
                 self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
                 self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
-
+        """
     def set_angle(self, angle):
         self.angle = angle
 

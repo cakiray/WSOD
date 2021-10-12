@@ -418,7 +418,7 @@ def non_maximum_supression(points, crm, peak_list, peak_responses,calibs):
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
-    kept_idxs = nms_cpu(dets, thresh=0.5)
+    kept_idxs = nms_cpu(dets, thresh=0.9)
 
     return kept_idxs
 

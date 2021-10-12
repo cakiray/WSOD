@@ -14,9 +14,16 @@ class PeakStimulation(autograd.Function):
         # amplify Center Response Map values
         # input is 3-channels torch as 1x1xN
         # z_values is 3d point clouds forward(z in velo) direction values
-        base = 10
-       
-        input = input * ( torch.log(z_values+1e-5))#/math.log(5,10)) # log_5(z)
+        """
+        base = 10  
+        mult_func = torch.ones_like(z_values)
+        closer40_mask = z_values<40
+        further40_mask = z_values>=40
+        mult_func[closer40_mask] = torch.log(z_values[closer40_mask])
+        mult_func[further40_mask] = z_values[further40_mask]
+        input = input * mult_func
+        """
+        input = input * ( torch.log(z_values) )#/math.log(5,10)) # log_5(z)
         
         # peak finding by getting peak in windows
         offset = (win_size - 1) // 2
