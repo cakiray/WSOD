@@ -412,14 +412,14 @@ def get_corners(center): #center is numpy array in rect coords, [x,y,z]
     #average dimensions of a car
     h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
     x,y,z = center[0,0], center[0,1], center[0,2]
-    corners = np.asarray([[x+l/2, y+w/2, z-h/2],
-                        [x+l/2, y+w/2, z+h/2],
-                        [x-l/2, y+w/2, z-h/2],
-                        [x+l/2, y-w/2, z-h/2],
-                        [x-l/2, y-w/2, z+h/2],
-                        [x-l/2, y-w/2, z-h/2],
-                        [x+l/2, y-w/2, z+h/2],
-                        [x-l/2, y+w/2, z+h/2]])
+    corners = np.asarray([[x+h/2, y+w/2, z-l/2],
+                        [x+h/2, y+w/2, z+l/2],
+                        [x-h/2, y+w/2, z-l/2],
+                        [x+h/2, y-w/2, z-l/2],
+                        [x-h/2, y-w/2, z+l/2],
+                        [x-h/2, y-w/2, z-l/2],
+                        [x+h/2, y-w/2, z+l/2],
+                        [x-h/2, y+w/2, z+l/2]])
     return corners
 
 def non_maximum_supression(bboxs_raw):
