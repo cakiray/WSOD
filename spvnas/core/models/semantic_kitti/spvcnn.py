@@ -232,6 +232,7 @@ class SPVCNN(nn.Module):
         # change last classifier layer's output channel and make it trainable, by default
         self.classifier = nn.Sequential(nn.Linear(self.cs[8],num_classes))
         self.classifier.set_output_channel(num_classes)
+        print(self)
         return self
                 
     def freezelayers(self, num_classes):
