@@ -382,6 +382,9 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         max_bound = bbox.get_max_bound()
         dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
         w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
+
+        #dimension are of prototype
+        h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
         ry = 0 # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
