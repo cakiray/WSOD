@@ -82,7 +82,7 @@ def spvnas_specialized(net_id, pretrained=True,  **kwargs):
     ))
     input_channels = kwargs.get('input_channels', 4)
     model = SPVNAS(
-        net_config['num_classes'],
+        num_classes=net_config['num_classes'],
         input_channels = input_channels,
         macro_depth_constraint=1,
         pres=net_config['pres'],

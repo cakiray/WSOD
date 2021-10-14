@@ -33,7 +33,7 @@ class SPVNAS(RandomNet):
     max_micro_depth = 2
     num_down_stages = len(output_channels) // 2
 
-    def __init__(self, num_classes, macro_depth_constraint, **kwargs):
+    def __init__(self,input_channels, num_classes, macro_depth_constraint, **kwargs):
         super().__init__()
         self.pres = kwargs.get('pres', 0.05)
         self.vres = kwargs.get('vres', 0.05)
@@ -55,9 +55,9 @@ class SPVNAS(RandomNet):
 
         base_channels = self.base_channels
         output_channels = self.output_channels
-
+        self.input_channel = input_channels
         self.stem = nn.Sequential(
-            spnn.Conv3d(4, base_channels, kernel_size=3, stride=1),
+            spnn.Conv3d(input_channels, base_channels, kernel_size=3, stride=1),
             spnn.BatchNorm(base_channels), spnn.ReLU(True),
             spnn.Conv3d(base_channels, base_channels, kernel_size=3, stride=1),
             spnn.BatchNorm(base_channels), spnn.ReLU(True))
