@@ -359,6 +359,7 @@ def KNN(points, anchor, k=10):
 def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     bboxs_raw = []
     for i,response in enumerate(peak_responses):
+        """
         mask = response.flatten()>0.0
         pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
         bbox = open3d.geometry.AxisAlignedBoundingBox()
@@ -367,21 +368,26 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
-        """
+        
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
         #corners from velodyne to rect
         np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
-        #2D bounding box's corners location on image
-        """
-        np_corners = get_corners(np_center) # in rect coord
-        corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-
+        
         # h->z, w->x, l->y
         min_bound = bbox.get_min_bound()
         max_bound = bbox.get_max_bound()
         dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
         w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
+
+        """
+        np_center = points[ peak_list[i][2], 0:3] #in velo
+        np_center = calibs.project_velo_to_rect(np_center) #  in rect
+
+        #2D bounding box's corners location on image
+        np_corners = get_corners(np_center) # in rect coord
+        corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
+
 
         #dimension are of prototype
         h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
