@@ -90,15 +90,12 @@ def spvnas_specialized(net_id, pretrained=True,  **kwargs):
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
     model.manual_select(net_config)
     model = model.determinize()
-    model.shrink()
-    if pretrained:
-        
+    if pretrained:    
         init = torch.load(
             download_url(url_base + net_id + '/init', model_dir='.torch/spvnas_specialized/%s/' % net_id),
             map_location='cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu'
         )['model']
         model.load_state_dict(init)
-       
         
     return model
 
@@ -175,8 +172,10 @@ def spvcnn(net_id, pretrained=True, **kwargs):
     net_config = json.load(open(
         download_url(url_base + net_id + '/net.config', model_dir='.torch/spvcnn/%s/' % net_id)
     ))
-    input_channels = kwargs.get('input_channels', 4)
-    num_classes = kwargs.get('num_classes', net_config['num_classes'])
+    #input_channels = kwargs.get('input_channels', 4)
+    #num_classes = kwargs.get('num_classes', net_config['num_classes'])
+    num_classes = net_config['num_classes']
+    input_channels = 4
     model = SPVCNN(
         num_classes= num_classes,
         input_channels=input_channels,
@@ -184,7 +183,7 @@ def spvcnn(net_id, pretrained=True, **kwargs):
         pres=net_config['pres'],
         vres=net_config['vres']
     ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
-    model = model.change_last_layer(num_classes)
+    #model = model.change_last_layer(num_classes)
     if pretrained:
         if kwargs['weights'] is not None:
             dict_ = torch.load(kwargs['weights'])['model']
@@ -198,6 +197,8 @@ def spvcnn(net_id, pretrained=True, **kwargs):
         )['model']
         
         model.load_state_dict(init)
+     
+    model = model.change_last_layer(num_classes=1)
     return model
 
 def spvcnn_specialized(net_id, pretrained=True,  **kwargs):

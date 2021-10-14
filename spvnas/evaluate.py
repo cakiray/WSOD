@@ -62,7 +62,10 @@ def main() -> None:
             collate_fn=dataset[split].collate_fn)
 
     if 'spvnas' == configs.model.name:
-        model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
+        #model = spvnas_best(net_id=args.name, weights=args.weights, configs=configs, input_channels=configs.data.input_channels)
+        model = spvnas_specialized(net_id=args.name,  configs=configs, input_channels=configs.data.input_channels)
+        model = model.updatelayers_with_freeze(configs.data.num_classes)
+
     elif 'spvcnn' == configs.model.name:
         model = spvcnn_best(net_id=args.name, weights=args.weights, input_channels=configs.data.input_channels, num_classes=configs.data.num_classes)
     elif 'spvnas_cnn' == configs.model.name:
