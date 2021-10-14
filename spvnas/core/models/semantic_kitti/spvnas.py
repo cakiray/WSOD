@@ -187,7 +187,7 @@ class SPVNAS(RandomNet):
         self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
         self.classifier.set_output_channel(num_classes)
         return self
-        @staticmethod
+    @staticmethod
     def median_filter(input):
         batch_size, num_channels, n = input.size()
         threshold = torch.median(input.view(batch_size, num_channels, n), dim=2)

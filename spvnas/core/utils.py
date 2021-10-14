@@ -381,7 +381,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
 
         """
-        np_center = points[ peak_list[i][2], 0:3] #in velo
+        np_center =np.asarray( points[ peak_list[i][2], 0:3]).reshape(1,3) #in velo
         np_center = calibs.project_velo_to_rect(np_center) #  in rect
 
         #2D bounding box's corners location on image
