@@ -187,7 +187,23 @@ class SPVNAS(RandomNet):
         self.classifier = DynamicLinear(self.output_channels[-1], num_classes)
         self.classifier.set_output_channel(num_classes)
         return self
+        @staticmethod
+    def median_filter(input):
+        batch_size, num_channels, n = input.size()
+        threshold = torch.median(input.view(batch_size, num_channels, n), dim=2)
+        return threshold.contiguous().view(batch_size, num_channels, 1)
 
+    @staticmethod
+    def mean_filter(input):
+        # set non-zero to zero
+        input = torch.max(input,torch.tensor([0.]).to(input.device))
+        #get only positive values
+        input_nonzero = input[:,:,torch.nonzero(input)[:,2]]
+
+        batch_size, num_channels, n = input_nonzero.size()
+        threshold = torch.mean(input_nonzero.view(batch_size, num_channels, n), dim=2)
+        #print("thresh", threshold)
+        return threshold.contiguous().view(batch_size, num_channels, 1)
     #modify conv3d layers so that they have prehook and posthook
     # to get PRM nicer
     def _patch(self):
