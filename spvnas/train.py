@@ -22,7 +22,7 @@ from torchpack.utils.logging import logger
 
 from core.trainers import SemanticKITTITrainer
 from core.callbacks import MeanIoU, MSE, Shrinkage, MTE
-from model_zoo import spvnas_cnn, spvcnn, spvnas_specialized
+from model_zoo import spvnas_cnn, spvcnn, spvnas_specialized, spvnas_cnn_specialized
 from core import builder, utils
 from core.modules.peak_stimulator import *
 from core.calibration import Calibration
@@ -88,11 +88,16 @@ def main() -> None:
             model = spvcnn(args.name, input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
         else:
             model = spvcnn(args.name, num_classes=configs.data.num_classes, pretrained=True, weights = args.weights)
-            #model = model.change_last_layer()
-
         model.train()
     elif 'spvnas_cnn'== configs.model.name:
-        model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        if args.weights is None:
+            model = spvnas_cnn(input_channels = configs.data.input_channels, num_classes=configs.data.num_classes, pretrained=False)
+        else:
+            if 'iou' in args.weights: # means we took weights after semantickitti training
+                model = spvnas_cnn_specialized(args.name, num_classes=configs.data.num_classes, pretrained=True, weights = args.weights)
+            else:
+                model = spvnas_cnn(args.name, num_classes=configs.data.num_classes, pretrained=True, weights = args.weights)
+
         model.train()
     else:
         raise NotImplementedError

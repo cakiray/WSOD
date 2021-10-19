@@ -75,6 +75,27 @@ def spvnas_cnn(pretrained=False, **kwargs):
 
     return model
 
+def spvnas_cnn_specialized(pretrained=False, **kwargs):
+
+    input_channels = kwargs.get('input_channels', 4)
+    num_classes = kwargs.get('num_classes', 1)
+    model = SPVNAS_CNN(
+        num_classes=19,
+        input_channels = input_channels,
+        macro_depth_constraint=1,
+    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+
+    if pretrained:
+        dict_ = torch.load(kwargs['weights'])['model']
+        dict_correct_naming = dict()
+        for key in dict_:
+            dict_correct_naming[key.replace('module.','')] = dict_[key]
+        model.load_state_dict(dict_correct_naming)
+        print("Model weights are loaded.")
+
+    model = model.change_last_layer(num_classes=num_classes)
+    return model
+
 def spvnas_specialized(net_id, pretrained=True,  **kwargs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'
     net_config = json.load(open(
@@ -96,7 +117,8 @@ def spvnas_specialized(net_id, pretrained=True,  **kwargs):
             map_location='cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu'
         )['model']
         model.load_state_dict(init)
-        
+
+
     return model
 
 
