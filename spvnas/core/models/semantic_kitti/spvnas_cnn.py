@@ -326,6 +326,8 @@ class SPVNAS_CNN(nn.Module):
         z1.F = z1.F + self.point_transforms[0](z0.F)
 
         y1 = point_to_voxel(x4, z1)
+        print("\nx4",x4.F.shape)
+        print("\nz1",z1.F.shape)
         print("\ny1",y1.F.shape)
         #y1.F = self.dropout(y1.F)
         y1 = self.up1[0](y1)
