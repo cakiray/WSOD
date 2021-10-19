@@ -359,7 +359,7 @@ def KNN(points, anchor, k=10):
 def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     bboxs_raw = []
     for i,response in enumerate(peak_responses):
-        """
+
         mask = response.flatten()>0.0
         pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
         bbox = open3d.geometry.AxisAlignedBoundingBox()
@@ -383,11 +383,11 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         """
         np_center =np.asarray( points[ peak_list[i][2], 0:3]).reshape(1,3) #in velo
         np_center = calibs.project_velo_to_rect(np_center) #  in rect
-
+        
         #2D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
+        """
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-
 
         #dimension are of prototype
         h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
@@ -407,8 +407,6 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         #  location     3D object location x,y,z in camera coordinates (in meters)
         #  rotation_y   Rotation ry around Y-axis in camera coordinates [-pi..pi]
         #  score
-        
-        
         bboxs_raw.append(('Car', alpha, corners_img[0,0], corners_img[0,1], corners_img[0, 2], corners_img[0, 3],
                          h, w, l, x, y, z, ry, score))
 
