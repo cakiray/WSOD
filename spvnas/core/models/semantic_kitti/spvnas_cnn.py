@@ -306,22 +306,30 @@ class SPVNAS_CNN(nn.Module):
 
         # x: SparseTensor z: PointTensor
         z = PointTensor(x.F, x.C.float())
+        print("\nz",z.F.shape)
         x0 = initial_voxelize(z, self.pres, self.vres)
+        print("\nx0",x0.F.shape)
         x0 = self.stem(x0) # 32 x 32
         z0 = voxel_to_point(x0, z, nearest=False) # 32
+        print("\nz0",z0.F.shape)
         z0.F = z0.F
 
         x1 = point_to_voxel(x0, z0) # 32
+        print("\nx1",x1.F.shape)
         x1 = self.stage1(x1) # 64
         x2 = self.stage2(x1) # 128
         x3 = self.stage3(x2)
+        print("\nx3",x3.F.shape)
         x4 = self.stage4(x3)
         z1 = voxel_to_point(x4, z0)
+        print("\nz1",z1.F.shape)
         z1.F = z1.F + self.point_transforms[0](z0.F)
 
         y1 = point_to_voxel(x4, z1)
+        print("\ny1",y1.F.shape)
         #y1.F = self.dropout(y1.F)
         y1 = self.up1[0](y1)
+        print(y1.F.shape, x3.F.shape)
         y1 = torchsparse.cat([y1, x3])
         y1 = self.up1[1](y1)
 
