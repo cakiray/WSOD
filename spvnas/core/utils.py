@@ -365,6 +365,13 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
 
+        bbox_oriented = open3d.geometry.OrientedBoundingBox()
+        pc_or = points[mask][:,0:3]
+        pc_or[:,-1] = 0
+        pc_or = open3d.utility.Vector3dVector(pc_or)
+        bbox_oriented = bbox_oriented.create_from_points(pc_or)
+        print("R:", bbox_oriented.R , bbox.get_min_bound(), bbox.get_max_bound())
+
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
