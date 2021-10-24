@@ -361,17 +361,26 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     for i,response in enumerate(peak_responses):
 
         mask = response.flatten()>0.0
-        pc_ = open3d.utility.Vector3dVector(points[mask][:,0:3])
+        obj_mask = points[mask][:,0:3]
+        pc_ = open3d.utility.Vector3dVector(obj_mask)
+        print(np.asarray(pc_).shape)
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
 
         bbox_oriented = open3d.geometry.OrientedBoundingBox()
-        pc_or = points[mask][:,0:3]
-        pc_or[:,-1] = 0
+        size = obj_mask.shape[0]
+        pc_or = np.zeros(shape=(size*2,3))
+        pc_or[:size] = obj_mask
+        pc_or[size:] = obj_mask
+        pc_or[:size, -1] = 0
+        pc_or[size:, -1] = 1
+
         pc_or = open3d.utility.Vector3dVector(pc_or)
         bbox_oriented = bbox_oriented.create_from_points(pc_or)
-        print("R:", bbox_oriented.R , bbox.get_min_bound(), bbox.get_max_bound())
-
+        print("R:\n", bbox_oriented.R , bbox_oriented.extent)
+        R = bbox_oriented.R
+        orientation = np.arctan2( R[:,1], R[:,0])  
+        print("\nor: ", orientation)
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
@@ -446,7 +455,7 @@ def non_maximum_supression(bboxs_raw):
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
-    kept_idxs = nms_cpu(dets, thresh=0.9)
+    kept_idxs = nms_cpu(dets, thresh=0.7)
 
     return kept_idxs
 
