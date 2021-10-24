@@ -390,9 +390,10 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
             #ry = orientation_vector[0]
             from pyquaternion import Quaternion
             quat = Quaternion(matrix=R)
-            ry = quat.radians
+            ry = quat.radians + np.pi/2
         #get center of bbox and convert from velo to rect
-        np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
+        #np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
+        np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
