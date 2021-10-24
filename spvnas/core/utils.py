@@ -375,21 +375,21 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         pc_or = np.zeros(shape=(size*2,3))
         pc_or[:size] = obj_mask
         pc_or[size:] = obj_mask
-        pc_or[:size, -1] = 0
-        pc_or[size:, -1] = 1
+        pc_or[:size, 2] = 0
+        pc_or[size:, 2] = 1
 
         pc_or = open3d.utility.Vector3dVector(pc_or)
         bbox_oriented = bbox_oriented.create_from_points(pc_or)
         #bbox_oriented.extent # extension of convex hull on x,y,z
         R = bbox_oriented.R
         orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
-        ry = orientation_vector[0]
-
+        ry = orientation_vector[1]
+        
 
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
-        """
+        
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
         #corners from velodyne to rect
@@ -400,18 +400,18 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         max_bound = bbox.get_max_bound()
         dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
         w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
-        
+        """
         # Set center as peak's location
         np_center =np.asarray( points[ peak_list[i][2], 0:3]).reshape(1,3) #in velo
         np_center = calibs.project_velo_to_rect(np_center) #  in rect
-        """
+        
         #2D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
-
+        """
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         #dimension are of prototype
-        h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
+        #h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
         #ry = np.pi/2 # pi/2 works prototype placing in general # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
