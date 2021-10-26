@@ -382,7 +382,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         bbox_oriented = bbox_oriented.create_from_points(pc_or)
         #bbox_oriented.extent # extension of convex hull on x,y,z
         R = bbox_oriented.R
-        print(np.linalg.det(R))
+        #print(np.linalg.det(R))
         if abs( 1- np.linalg.det(R) )> 1e-5:
             ry = np.pi/2
         else:
@@ -390,10 +390,10 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
             #ry = orientation_vector[0]
             from pyquaternion import Quaternion
             quat = Quaternion(matrix=R)
-            ry = quat.radians + np.pi/2
+            ry = quat.radians# + np.pi/2
         #get center of bbox and convert from velo to rect
-        #np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
-        np_center = bbox_oriented.get_center().reshape(1,3)
+        np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
+        #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
