@@ -404,7 +404,8 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         rect, R, _, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
-        ry = quat.radians
+        ry = quat.radians + np.pi/2
+        #print("ry ", ry)
         #np_center = calibs.project_velo_to_rect(center)
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
@@ -424,7 +425,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         """
         #3D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
-        print("corners self calc: ", np_corners)
+        #print("corners self calc: ", np_corners)
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         #dimension are of prototype
@@ -480,7 +481,7 @@ def non_maximum_supression(bboxs_raw):
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
-    kept_idxs = nms_cpu(dets, thresh=0.7)
+    kept_idxs = nms_cpu(dets, thresh=0.5)
 
     return kept_idxs
 
@@ -594,9 +595,9 @@ def _rectangle_search( x, y):
     c3 = calc_cross_point(a=rect['a'][2:4], b=rect['b'][2:4], c=rect['c'][2:4])
     c4 = calc_cross_point(a=[rect['a'][0],rect['a'][3]], b=[rect['b'][0],rect['b'][3]], c=[rect['c'][0],rect['c'][3]])
     corners_velo = np.asarray([c1,c2,c3,c4])
-    print("R in rect search: " , R)
-    print("corners velo: ", corners_velo)
-    print("center velo: ", center)
+    #print("R in rect search: " , R)
+    #print("corners velo: ", corners_velo)
+    #print("center velo: ", center)
 
     return rect, R, center, corners_velo
 
