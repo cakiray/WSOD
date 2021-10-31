@@ -130,7 +130,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             prm[prm==float('inf')] = 0.0
             prm[prm==float('-inf')] = 0.0
             avg_sum += np.mean(prm[prm>0.0])
-            prm[prm<0.001] = 0.0
+            prm[prm<0.005] = 0.0
 
             #prm = utils.assignAvgofNeighbors(points=inputs.F, prm=prm, k=10)
         #print("center and argmax center point ", points[np.argmax(prm)], points[valid_peak_list[idx][2]])

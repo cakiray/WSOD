@@ -386,7 +386,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         R = bbox_oriented.R
         #print(np.linalg.det(R))
         if abs(- 1- np.linalg.det(R) )> 1e-5:
-            R = -R
+           R = -R
         #else:
         if True:
             #orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
@@ -481,7 +481,7 @@ def non_maximum_supression(bboxs_raw):
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
-    kept_idxs = nms_cpu(dets, thresh=0.5)
+    kept_idxs = nms_cpu(dets, thresh=0.3)
 
     return kept_idxs
 
