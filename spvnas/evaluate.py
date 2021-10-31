@@ -190,7 +190,7 @@ def main() -> None:
                 # concat_in_out.shape[0]x5, first columns are pc, last 1 column is output
                 concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1)
                 np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-                
+               
                 #for i in range(len(peak_responses)):
                 #    prm = peak_responses[i]
                 #    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
