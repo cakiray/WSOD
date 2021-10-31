@@ -362,11 +362,11 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
 
         mask = response.flatten()>0.0
         obj_mask = points[mask][:,0:3]
-        """
+
         pc_ = open3d.utility.Vector3dVector(obj_mask)
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
-
+        """
         
         # To calculate rotation around z(up):
         # Set z=0 and z=1 for all points in the object mask
@@ -395,17 +395,17 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
             quat = Quaternion(matrix=R)
             ry = quat.radians + np.pi/2
         
-
+        """
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
-        """
-        rect, R, center, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
+
+        rect, R, _, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
         ry = quat.radians
-        np_center = calibs.project_velo_to_rect(center)
+        #np_center = calibs.project_velo_to_rect(center)
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
@@ -431,7 +431,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
 
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
-        y = y- h/2 # bbox.center up comes  negative, so normally I add h/2 to it, but now it is 0
+        #y = y- h/2 # bbox.center up comes  negative, so normally I add h/2 to it, but now it is 0
 
         #ry = np.pi/2 # pi/2 works prototype placing in general # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
@@ -587,7 +587,7 @@ def _rectangle_search( x, y):
     R = np.asarray([[cos_s, sin_s, 0],
                     [-sin_s, cos_s, 0],
                     [0, 0, 1]])
-    center = [(min(c1_s)+max(c1_s))/2, (min(c2_s)+max(c2_s))/2, 0]
+    center = np.asarray([(min(c1_s)+max(c1_s))/2, (min(c2_s)+max(c2_s))/2, 0])
 
     c1 = calc_cross_point(a=rect['a'][0:2], b=rect['b'][0:2], c=rect['c'][0:2])
     c2 = calc_cross_point(a=rect['a'][1:3], b=rect['b'][1:3], c=rect['c'][1:3])
