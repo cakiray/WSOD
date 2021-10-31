@@ -66,7 +66,7 @@ def get_bboxes( labels, calibs):
             ry = data['rotation_y'] # yaw angle (around Y-axis in camera coordinates) [-pi..pi]
             xyz = np.array([[x,y,z]])
             t = (xyz[0][0], xyz[0][1], xyz[0][2])  # location (x,y,z) in camera coord.
-
+            print("ry ", ry)
             bbox = [h,w,l,t,ry]
             bboxes.extend(box_center_to_corner(bbox, calibs))
 
@@ -362,10 +362,12 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
 
         mask = response.flatten()>0.0
         obj_mask = points[mask][:,0:3]
+        """
         pc_ = open3d.utility.Vector3dVector(obj_mask)
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
 
+        
         # To calculate rotation around z(up):
         # Set z=0 and z=1 for all points in the object mask
         # Calculate rotation matrix R, orthogonal unit-vectors pointing on rotated x, y and z directions
@@ -383,18 +385,27 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         #bbox_oriented.extent # extension of convex hull on x,y,z
         R = bbox_oriented.R
         #print(np.linalg.det(R))
-        if abs( 1- np.linalg.det(R) )> 1e-5:
-            ry = np.pi/2
-        else:
+        if abs(- 1- np.linalg.det(R) )> 1e-5:
+            R = -R
+        #else:
+        if True:
             #orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
             #ry = orientation_vector[0]
             from pyquaternion import Quaternion
             quat = Quaternion(matrix=R)
-            ry = quat.radians# + np.pi/2
+            ry = quat.radians + np.pi/2
+        
+
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
+        """
+        rect, R, center, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
+        from pyquaternion import Quaternion
+        quat = Quaternion(matrix=R)
+        ry = quat.radians
+        np_center = calibs.project_velo_to_rect(center)
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
@@ -411,14 +422,17 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         np_center =np.asarray( points[ peak_list[i][2], 0:3]).reshape(1,3) #in velo
         np_center = calibs.project_velo_to_rect(np_center) #  in rect
         """
-        #2D bounding box's corners location on image
+        #3D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
-
+        print("corners self calc: ", np_corners)
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         #dimension are of prototype
         h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
+
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
+        y = y- h/2 # bbox.center up comes  negative, so normally I add h/2 to it, but now it is 0
+
         #ry = np.pi/2 # pi/2 works prototype placing in general # rotation along y axis is set to 0 for now
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
@@ -519,6 +533,139 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
            img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
            """
 
+def _rectangle_search( x, y):
+
+    X = np.array([x, y]).T
+    dtheta_deg_for_serarch = 1.0
+    criteria = 3
+
+    dtheta = np.deg2rad(dtheta_deg_for_serarch)
+    minp = (-float('inf'), None)
+    for theta in np.arange(0.0, np.pi / 2.0 - dtheta, dtheta):
+
+        e1 = np.array([np.cos(theta), np.sin(theta)])
+        e2 = np.array([-np.sin(theta), np.cos(theta)])
+
+        c1 = X @ e1.T
+        c2 = X @ e2.T
+
+        # Select criteria
+        if criteria == 1:
+            cost = _calc_area_criterion(c1, c2)
+        elif criteria == 2:
+            cost = _calc_closeness_criterion(c1, c2)
+        elif criteria == 3:
+            cost = _calc_variance_criterion(c1, c2)
+
+        if minp[0] < cost:
+            minp = (cost, theta)
+
+    # calculate best rectangle
+    sin_s = np.sin(minp[1])
+    cos_s = np.cos(minp[1])
+
+    c1_s = X @ np.array([cos_s, sin_s]).T
+    c2_s = X @ np.array([-sin_s, cos_s]).T
+
+    rect = {'a': [], 'b': [], 'c': []}
+    rect['a'].append(cos_s)
+    rect['b'].append(sin_s)
+    rect['c'].append(min(c1_s))
+
+    rect['a'].append(-sin_s)
+    rect['b'].append(cos_s)
+    rect['c'].append(min(c2_s))
+
+    rect['a'].append(cos_s)
+    rect['b'].append(sin_s)
+    rect['c'].append(max(c1_s))
+
+    rect['a'].append(-sin_s)
+    rect['b'].append(cos_s)
+    rect['c'].append(max(c2_s))
+
+    R = np.asarray([[cos_s, sin_s, 0],
+                    [-sin_s, cos_s, 0],
+                    [0, 0, 1]])
+    center = [(min(c1_s)+max(c1_s))/2, (min(c2_s)+max(c2_s))/2, 0]
+
+    c1 = calc_cross_point(a=rect['a'][0:2], b=rect['b'][0:2], c=rect['c'][0:2])
+    c2 = calc_cross_point(a=rect['a'][1:3], b=rect['b'][1:3], c=rect['c'][1:3])
+    c3 = calc_cross_point(a=rect['a'][2:4], b=rect['b'][2:4], c=rect['c'][2:4])
+    c4 = calc_cross_point(a=[rect['a'][0],rect['a'][3]], b=[rect['b'][0],rect['b'][3]], c=[rect['c'][0],rect['c'][3]])
+    corners_velo = np.asarray([c1,c2,c3,c4])
+    print("R in rect search: " , R)
+    print("corners velo: ", corners_velo)
+    print("center velo: ", center)
+
+    return rect, R, center, corners_velo
+
+
+def calc_cross_point( a, b, c):
+    x = (b[0] * -c[1] - b[1] * -c[0]) / (a[0] * b[1] - a[1] * b[0])
+    y = (a[1] * -c[0] - a[0] * -c[1]) / (a[0] * b[1] - a[1] * b[0])
+    return x, y, 0 # 0 is as 3rd direction corner
+
+
+def _calc_area_criterion(c1, c2):
+    c1_max = max(c1)
+    c2_max = max(c2)
+    c1_min = min(c1)
+    c2_min = min(c2)
+
+    alpha = -(c1_max - c1_min) * (c2_max - c2_min)
+
+    return alpha
+
+def _calc_closeness_criterion( c1, c2):
+    min_dist_of_closeness_crit = 0.01
+
+    c1_max = max(c1)
+    c2_max = max(c2)
+    c1_min = min(c1)
+    c2_min = min(c2)
+
+    D1 = [min([np.linalg.norm(c1_max - ic1),
+               np.linalg.norm(ic1 - c1_min)]) for ic1 in c1]
+    D2 = [min([np.linalg.norm(c2_max - ic2),
+               np.linalg.norm(ic2 - c2_min)]) for ic2 in c2]
+
+    beta = 0
+    for i, _ in enumerate(D1):
+        d = max(min([D1[i], D2[i]]), min_dist_of_closeness_crit)
+        beta += (1.0 / d)
+
+    return beta
+
+def _calc_variance_criterion( c1, c2):
+    c1_max = max(c1)
+    c2_max = max(c2)
+    c1_min = min(c1)
+    c2_min = min(c2)
+
+    D1 = [min([np.linalg.norm(c1_max - ic1),
+               np.linalg.norm(ic1 - c1_min)]) for ic1 in c1]
+    D2 = [min([np.linalg.norm(c2_max - ic2),
+               np.linalg.norm(ic2 - c2_min)]) for ic2 in c2]
+
+    E1, E2 = [], []
+    for (d1, d2) in zip(D1, D2):
+        if d1 < d2:
+            E1.append(d1)
+        else:
+            E2.append(d2)
+
+    V1 = 0.0
+    if E1:
+        V1 = - np.var(E1)
+
+    V2 = 0.0
+    if E2:
+        V2 = - np.var(E2)
+
+    gamma = V1 + V2
+
+    return gamma
 
 def assignAvgofNeighbors(points, prm, k=10):
     for i in prm:
