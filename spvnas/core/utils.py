@@ -360,6 +360,9 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     bboxs_raw = []
     for i,response in enumerate(peak_responses):
 
+        #dimension are of prototype
+        h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
+
         mask = response.flatten()>0.0
         obj_mask = points[mask][:,0:3]
 
@@ -398,13 +401,20 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         """
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
+        print("center of bbox: ", np_center)
         #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
 
-        rect, R, _, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
+        rect, R, center_velo, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
+        corners_velo_2 = corners_velo
+        corners_velo_2[:,-1] += h
+        corners_velo = np.asarray(corners_velo+corners_velo_2)
+        corners_rect = calibs.project_velo_to_rect(corners_velo)
+        print("corners rect from lfit: ", corners_rect)
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
         ry = quat.radians
+        print("center from lfit: ", center_velo)
         #np_center = calibs.project_velo_to_rect(center)
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
@@ -426,9 +436,6 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         np_corners = get_corners(np_center) # in rect coord
         print("corners self calc: ", np_corners)
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-
-        #dimension are of prototype
-        h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
 
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
         #y = y- h/2 # bbox.center up comes  negative, so normally I add h/2 to it, but now it is 0
@@ -480,7 +487,7 @@ def non_maximum_supression(bboxs_raw):
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
-    kept_idxs = nms_cpu(dets, thresh=0.7)
+    kept_idxs = nms_cpu(dets, thresh=0.3)
 
     return kept_idxs
 
@@ -587,13 +594,13 @@ def _rectangle_search( x, y):
     R = np.asarray([[cos_s, sin_s, 0],
                     [-sin_s, cos_s, 0],
                     [0, 0, 1]])
-    center = np.asarray([(min(c1_s)+max(c1_s))/2, (min(c2_s)+max(c2_s))/2, 0])
 
     c1 = calc_cross_point(a=rect['a'][0:2], b=rect['b'][0:2], c=rect['c'][0:2])
     c2 = calc_cross_point(a=rect['a'][1:3], b=rect['b'][1:3], c=rect['c'][1:3])
     c3 = calc_cross_point(a=rect['a'][2:4], b=rect['b'][2:4], c=rect['c'][2:4])
     c4 = calc_cross_point(a=[rect['a'][0],rect['a'][3]], b=[rect['b'][0],rect['b'][3]], c=[rect['c'][0],rect['c'][3]])
     corners_velo = np.asarray([c1,c2,c3,c4])
+    center = np.asarray( [(c1[0]+c3[0])/2, (c1[2]+c3[2])/2])
     print("R in rect search: " , R)
     print("corners velo: ", corners_velo)
     print("center velo: ", center)
