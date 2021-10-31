@@ -401,19 +401,16 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         """
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
-        print("center of bbox: ", np_center)
+        #print("center of bbox: ", np_center)
         #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
 
         rect, R, center_velo, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
-        corners_velo_2 = corners_velo
-        corners_velo_2[:,-1] += h
-        corners_velo = np.asarray(corners_velo+corners_velo_2)
-        corners_rect = calibs.project_velo_to_rect(corners_velo)
-        print("corners rect from lfit: ", corners_rect)
+        
+        #print("corners rect from lfit: ", corners_rect)
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
-        print("center from lfit: ", center_velo)
+        #print("center from lfit: ", center_velo)
 
         ry = quat.radians + np.pi/2
         #print("ry ", ry)
@@ -435,7 +432,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         np_center = calibs.project_velo_to_rect(np_center) #  in rect
         """
         #3D bounding box's corners location on image
-        np_corners = get_corners(np_center) # in rect coord
+        #np_corners = get_corners(np_center) # in rect coord
         #print("corners self calc: ", np_corners)
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
@@ -489,7 +486,7 @@ def non_maximum_supression(bboxs_raw):
         dets[i] = np.asarray([[x1,y1,x2,y2,score]])
 
     #kept_idxs = nms_gpu(dets, nms_overlap_thresh=0.7, device_id=0) #gpu gave error
-    kept_idxs = nms_cpu(dets, thresh=0.3)
+    kept_idxs = nms_cpu(dets, thresh=0.7)
 
     return kept_idxs
 
@@ -603,9 +600,9 @@ def _rectangle_search( x, y):
     c4 = calc_cross_point(a=[rect['a'][0],rect['a'][3]], b=[rect['b'][0],rect['b'][3]], c=[rect['c'][0],rect['c'][3]])
     corners_velo = np.asarray([c1,c2,c3,c4])
 
-    center = np.asarray( [(c1[0]+c3[0])/2, (c1[2]+c3[2])/2])
+    center = np.asarray( [(c1[0]+c3[0])/2, (c1[1]+c3[1])/2])
     print("R in rect search: " , R)
-    print("corners velo: ", corners_velo)
+    #print("corners velo: ", corners_velo)
     print("center velo: ", center)
 
     return rect, R, center, corners_velo
