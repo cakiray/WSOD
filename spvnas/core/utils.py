@@ -389,7 +389,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         R = bbox_oriented.R
         #print(np.linalg.det(R))
         if abs(- 1- np.linalg.det(R) )> 1e-5:
-            R = -R
+           R = -R
         #else:
         if True:
             #orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
@@ -413,8 +413,10 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         print("corners rect from lfit: ", corners_rect)
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
-        ry = quat.radians
         print("center from lfit: ", center_velo)
+
+        ry = quat.radians + np.pi/2
+        #print("ry ", ry)
         #np_center = calibs.project_velo_to_rect(center)
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
@@ -434,7 +436,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         """
         #3D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
-        print("corners self calc: ", np_corners)
+        #print("corners self calc: ", np_corners)
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
@@ -600,6 +602,7 @@ def _rectangle_search( x, y):
     c3 = calc_cross_point(a=rect['a'][2:4], b=rect['b'][2:4], c=rect['c'][2:4])
     c4 = calc_cross_point(a=[rect['a'][0],rect['a'][3]], b=[rect['b'][0],rect['b'][3]], c=[rect['c'][0],rect['c'][3]])
     corners_velo = np.asarray([c1,c2,c3,c4])
+
     center = np.asarray( [(c1[0]+c3[0])/2, (c1[2]+c3[2])/2])
     print("R in rect search: " , R)
     print("corners velo: ", corners_velo)
