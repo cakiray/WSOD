@@ -42,9 +42,9 @@ class SemanticKITTITrainer(Trainer):
 
         inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-
+        
         outputs = self.model(inputs) # voxelized output (N,1)
-
+        
         if outputs.requires_grad:
             loss = self.criterion(outputs, targets)
             self.summary.add_scalar('loss', loss.item())
