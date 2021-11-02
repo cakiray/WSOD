@@ -102,7 +102,8 @@ def main() -> None:
                 _inputs[key] = value.cuda()
         filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
 
-        if not os.path.exists(os.path.join(configs.outputs, filename.replace('bin', 'npy'))):
+        #if not os.path.exists(os.path.join(configs.outputs, filename.replace('bin', 'npy'))):
+        if True:
             inputs = _inputs['lidar']
             targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
             points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
@@ -196,9 +197,7 @@ def main() -> None:
                 for i in kept_idxs:
                     prm = peak_responses[i]
                     np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-
-        else:
-            break
+            
 
     print("avg val of prms: " , avg_/n)
     """
