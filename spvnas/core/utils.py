@@ -541,7 +541,8 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
             """img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
            img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
            """
-
+    return kept_idxs
+#https://github.com/Silas-Asamoah/Lshape-fitting/tree/f2fc4e52d8c0e7203c36b3fcf4a9d50fa7132003
 def _rectangle_search( x, y):
 
     X = np.array([x, y]).T

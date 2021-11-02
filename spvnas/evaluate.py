@@ -133,7 +133,7 @@ def main() -> None:
             #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
             label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
             labels = utils.read_labels( label_file)
-            utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
+            kept_idxs = utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
 
             """
             continue
@@ -193,9 +193,9 @@ def main() -> None:
                 concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1)
                 np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
                
-                #for i in range(len(peak_responses)):
-                #    prm = peak_responses[i]
-                #    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
+                for i in kept_idxs:
+                    prm = peak_responses[i]
+                    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
 
         else:
             break
