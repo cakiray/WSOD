@@ -84,8 +84,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
         # if peak val * log(z_val) < peak_threshold
-        if peak_val > peak_threshold / np.log(points[peak_list[idx,2]]):
-            valid_peak_list.append(peak_list[idx,:])
+        if peak_val * np.log(points[peak_list[idx,2], 0]) > peak_threshold:
+            valid_peak_list.append(peak_list[idx])
     #valid_peak_list = peak_list # peak elimination is in stimulation
     if len(valid_peak_list) == 0:
         return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
@@ -97,7 +97,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
     for idx in range(len(valid_peak_list)):
         grad_output.zero_()
         # Set 1 to the max of predicted center points in gradient
-        grad_output[valid_peak_list[idx, 0], valid_peak_list[idx, 1], valid_peak_list[idx, 2]] = 1
+        grad_output[valid_peak_list[idx][0], valid_peak_list[idx][1], valid_peak_list[idx][2]] = 1
         """
         # Set K nearest neighbors of peak as 1, backpropagate from a group of points
         k=1
