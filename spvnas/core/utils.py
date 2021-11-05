@@ -398,8 +398,13 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
             #ry = orientation_vector[0]
             from pyquaternion import Quaternion
             quat = Quaternion(matrix=R)
-            ry = quat.radians + np.pi/2
-        
+            ry = quat.radians #+ np.pi/2
+            if quat.get_axis(undefined=[0,0,0])[2] == -1:
+                ry -= np.pi/2
+            else:
+                ry += np.pi/2
+            #print("axis ", quat.get_axis(undefined=[-2,-2,-2]))
+            #print("ry: ", ry)
         
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
