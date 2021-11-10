@@ -400,9 +400,9 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
             quat = Quaternion(matrix=R)
             ry = quat.radians #+ np.pi/2
             if quat.get_axis(undefined=[0,0,0])[2] == -1:
-                ry -= np.pi/2
-            else:
                 ry += np.pi/2
+            else:
+                ry -= np.pi/2
             #print("axis ", quat.get_axis(undefined=[-2,-2,-2]))
             #print("ry: ", ry)
         
