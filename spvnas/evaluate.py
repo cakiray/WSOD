@@ -85,131 +85,44 @@ def main() -> None:
     model.eval()
 
     t1_start = perf_counter()
-    mbbox_recall,mbbox_precision =0.0, 0.0
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
-    iou_threshold = configs.prm.iou_threshold
-    count, prec_count,recall_count = 0,0,0
-    bbox_p, bbox_r = 0,0
     n,r,p = 0,0,0
-    avg_ = 0.0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        #if True:#n < 10:
         n += 1
         _inputs = dict()
         for key, value in feed_dict.items():
             if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
                 _inputs[key] = value.cuda()
         filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
+        inputs = _inputs['lidar']
+        targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
+        points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
+        #print("\ncurrent file: ", filename)
+        # outputs are got 1-by-1 in test phase
+        inputs.F.requires_grad = True
+        outputs = model(inputs) # voxelized output (N,1)
+        loss = criterion(outputs, targets)
+        #print("\n\nloss: ", loss)
+        # make outputs in shape [Batch_size, Channel_size, Data_size]
+        if len(outputs.size()) == 2:
+            outputs_bcn = outputs[None, : , :]
+        outputs_bcn = outputs_bcn.permute(0,2,1)
+        # peak backpropagation
+        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, z_values=inputs.F[:,0], peak_threshold=peak_threshold, return_aggregation=True, win_size=win_size,
+                                                  peak_filter=model.module.mean_filter)
+        #print( "\nPeak len", len(peak_list),aggregation.item())
 
-        #if not os.path.exists(os.path.join(configs.outputs, filename.replace('bin', 'npy'))):
-        if True:
-            inputs = _inputs['lidar']
-            targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-            points = np.asarray(inputs.F[:,0:3].detach().cpu()) # 3D info of points in cloud
-            #print("\ncurrent file: ", filename)
-            # outputs are got 1-by-1 in test phase
-            inputs.F.requires_grad = True
-            outputs = model(inputs) # voxelized output (N,1)
-            loss = criterion(outputs, targets)
-            #print("\n\nloss: ", loss)
-            # make outputs in shape [Batch_size, Channel_size, Data_size]
-            if len(outputs.size()) == 2:
-                outputs_bcn = outputs[None, : , :]
-            outputs_bcn = outputs_bcn.permute(0,2,1)
-            # peak backpropagation
-            _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, z_values=inputs.F[:,0], peak_threshold=peak_threshold, return_aggregation=True, win_size=win_size,
-                                                      peak_filter=model.module.mean_filter)
-            #print( "\nPeak len", len(peak_list),aggregation.item())
-            
-            #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
-            
-            peak_list, peak_responses, peak_response_maps_sum, avg = prm_backpropagation(inputs, outputs_bcn, peak_list,
-                                                                                    peak_threshold=peak_threshold, normalize=True)
-            #print(f"Second peak list len: {len(peak_list)}")
-            avg_ += avg
-            #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /calibs
-            calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
-            calibs = Calibration( calib_file )
-            #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
-            label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
-            labels = utils.read_labels( label_file)
-            kept_idxs = utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=points, crm=outputs,peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
+        #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
 
-            """
-            continue
-            bbox_found_indicator = [0] * len(labels) # 0 if no peak found in a bbox, 1 if a peak found in a bbox
-            fp_bbox = 0
-            #print(f"Valid peak len:{len(peak_list)}, Number of cars: {utils.get_car_num(labels)}")
-            #Calculate mprecision and mrecall of each peak_response individually
-            for i in range(len(peak_list)):
-                prm = np.asarray(peak_responses[i])
-                peak_ind = peak_list[i].cpu() # [0,0,idx] idx in list inputs.F
-                peak = points[peak_ind[2]] # indx is at 3th element of peak variable
+        peak_list, peak_responses, peak_response_maps_sum, avg = prm_backpropagation(inputs, outputs_bcn, peak_list,
+                                                                                peak_threshold=peak_threshold, normalize=True)
 
-                # Find bbox that the peak belongs to
-                bbox_label, bbox_idx = utils.find_bbox(peak, labels, calibs)
-                if bbox_idx == -1: # if peak do not belong to any bbox, it is false positive
-                    fp_bbox += 1
-                    #print(f"FP (no gt bbox is related) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
+        if not os.path.exists(configs.outputs):
+            os.mkdir(configs.outputs)
+        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), peak_response_maps_sum)
 
-                #Mask of predicted PRM, points with positive value as 1, nonpositive as 0
-                # If each channel of peaks are returned, shape=(N,channel_num)
-                for col in range(prm.shape[1]):
-                    mask_pred = utils.generate_prm_mask(prm[:,col])
-                    # If peak belongs to a bbox
-                    if bbox_idx > -1:
-                        # generate mask for the bbox in interest
-                        prm_target = utils.generate_car_masks(points, bbox_label, calibs).reshape(-1)
-                        # if at least 1 channel of PRM has iou more that x%, it would be true positive
-                        iou_bbox = utils.iou(mask_pred, prm_target, n_classes=2)
-                        # if iou of peak's response and bbox is greater that 0.5, the peak is true positive
-                        if iou_bbox[1] >= iou_threshold:
-                            bbox_found_indicator[bbox_idx] = 1
 
-                if bbox_idx >-1  and bbox_found_indicator[bbox_idx] == 1:
-                    pass
-                    #print(f"TP CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
-                elif bbox_idx >- 1:
-                    pass
-                    #print(f"FP (under iou threshold) CRM value: {outputs[peak_ind[2]]}, PRM value: {peak_responses[i][peak_ind[2]]}")
-
-            bbox_recall = utils.bbox_recall(labels, bbox_found_indicator)
-            bbox_precision = utils.bbox_precision(labels, bbox_found_indicator, fp_bbox)
-
-            if bbox_recall >= 0.0:
-                mbbox_recall += bbox_recall
-                bbox_r +=1
-
-            if bbox_precision >= 0.0:
-                mbbox_precision += bbox_precision
-                bbox_p += 1
-
-            count += len(peak_list)
-            """
-            if True:#fp_bbox>0:
-                out = outputs.cpu()
-                inp_pc = inputs.F.cpu() # input point cloud
-                # concat_in_out.shape[0]x5, first columns are pc, last 1 column is output
-                concat_in_out = np.concatenate((inp_pc.detach(),out.detach()),axis=1)
-                np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), concat_in_out)
-               
-                for i in kept_idxs:
-                    prm = peak_responses[i]
-                    np.save( os.path.join(configs.outputs, filename.replace('.bin', '_prm_%d.npy' % i)), prm)
-            
-
-    print("avg val of prms: " , avg_/n)
-    """
-    mbbox_recall /= bbox_r
-    mbbox_precision /= bbox_p
-
-    print(f"\nMean Bbox Recall:{mbbox_recall}\nMean Bbox Precision:{mbbox_precision}\nTotal Number of PRMs: {count}")
-
-    writer = SummaryWriter(configs.tfevent+configs.tfeventname)
-    #writer.add_scalar(f"mBbox_Recall-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_recall, 0)
-    #writer.add_scalar(f"mBbox_Precision-ws_{win_size}-pt_{peak_threshold}-gs", mbbox_precision, 0)
-    """
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
 if __name__ == '__main__':

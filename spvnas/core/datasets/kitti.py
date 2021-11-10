@@ -185,7 +185,7 @@ class KITTIInternal:
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
         elif split=="test":
             val_idxs = open( os.path.join(root, txt_path, "val.txt") ).readlines()
-            val_idxs = val_idxs[len(val_idxs)//2:]
+            val_idxs = val_idxs[len(val_idxs)//2:][-500:]
             for idx in val_idxs:
                 idx = idx.strip()
                 self.pcs.append(os.path.join(self.root, self.data_path, '%s.bin' % idx))
@@ -267,8 +267,9 @@ class KITTIInternal:
     def __getitem__(self, index):
         pc_file = open ( self.pcs[index], 'rb')        
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
-        front_idxs = block_[:,0]>0
-        block_ = block_[front_idxs]
+        if 'test' not in self.split:
+            front_idxs = block_[:,0]>0
+            block_ = block_[front_idxs]
 
         if self.input_channels == 5:
              height = self.align_pcd(pc=block_, plane_file=self.planes[index])
