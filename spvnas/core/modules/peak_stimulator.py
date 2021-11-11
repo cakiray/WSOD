@@ -48,7 +48,7 @@ class PeakStimulation(autograd.Function):
         return (grad_input,) + (None,) * ctx.num_flags
 
 
-def peak_stimulation(input, return_aggregation=True, win_size=3, peak_filter=None):
+def peak_stimulation(input, return_aggregation=False, win_size=3, peak_filter=None):
     return PeakStimulation.apply(input, win_size, peak_filter, return_aggregation)
     
 def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normalize=False):
@@ -96,43 +96,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         prm = torch.abs(grad)
         if normalize:
             prm = torch.max(prm, dim=1).values
-            print(prm.shape) 
             min = torch.min(prm[torch.gt(prm,0.0)])
             max = torch.max(prm)
-            #prm = torch.div(i torch.sub(prm,min),(max-min))
             prm = (prm-min)/(max-min)
-            print(prm.shape)
             prm = torch.clamp(prm, min=0.005, max=max)
         
         prm = prm.view(-1,1).cpu()
         valid_peak_response_map.append(prm)
         peak_response_maps_con +=prm
-        """
-        # PRM is absolute of all channels
-        prm = grad.detach().cpu().clone()
-        prm = np.asarray(np.absolute( prm )) # shape: N x input_channel_num, 2D
-        #normalize gradient 0 <= prm <= 1
-        if normalize:
-            prm = utils.maxpool(prm) #channel no is 1 from now on
-            #mins= np.amin(np.array(prm[prm>0.0]), axis=0)
-            #print(prm[prm>0.0].shape)
-            mins = np.asarray( [ np.amin(prm[prm[:,i]>0.0][:,i]) for i in range(prm.shape[1]) ] )
-            maxs = np.amax(np.array(prm), axis=0)
-            prm = (prm-mins)/(maxs-mins)
-            #print("min max ", mins, maxs)
-            prm[prm==float('inf')] = 0.0
-            prm[prm==float('-inf')] = 0.0
-            avg_sum += np.mean(prm[prm>0.0])
-            prm[prm<0.005] = 0.0
 
-            #prm = utils.assignAvgofNeighbors(points=inputs.F, prm=prm, k=10)
-        #print("center and argmax center point ", points[np.argmax(prm)], points[valid_peak_list[idx][2]])
-        #peak_response_maps.append(prm)
-        valid_peak_response_map.append(prm)
-        peak_response_maps_con +=prm
-        #valid_peak_list contains indexes of valid peaks in center response map, shape: Mx3, e.g.[0,0,idx]
-        #valid_peak_list.append(valid_peak_list[idx,:])
-
-        """
     return valid_peak_list, valid_peak_response_map, peak_response_maps_con
 

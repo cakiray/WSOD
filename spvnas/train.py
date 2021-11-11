@@ -72,7 +72,7 @@ def main() -> None:
             shuffle=(split == 'train'))
         dataflow[split] = torch.utils.data.DataLoader(
             dataset[split],
-            batch_size=configs.batch_size,
+            batch_size=configs.batch_size if split=='train' else 1,
             sampler=sampler,
             num_workers=configs.workers_per_gpu,
             pin_memory=True,
