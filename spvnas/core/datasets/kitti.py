@@ -22,104 +22,51 @@ __all__ = ['KITTI']
 
 class KITTI(dict):
     def __init__(self, radius, root, data_path, crm_path, labels_path, calibs_path, planes_path, voxel_size,quantization_size, num_points, input_channels, **kwargs):
-        submit_to_server = kwargs.get('submit', False)
         sample_stride = kwargs.get('sample_stride', 1)
-        google_mode = kwargs.get('google_mode', False)
-
-        if submit_to_server:
-            super(KITTI, self).__init__({
-                'train':
-                    KITTIInternal(radius,
-                                  root,
-                                  data_path,
-                                  crm_path,
-                                  labels_path,
-                                  calibs_path,
-                                  planes_path,
-                                  voxel_size,
-                                  quantization_size,
-                                  num_points,
-                                  input_channels,
-                                  sample_stride=1,
-                                  split='train',
-                                  submit=True),
-                'valid':
-                    KITTIInternal(radius,
-                                  root,
-                                  data_path,
-                                  crm_path,
-                                  labels_path,
-                                  calibs_path,
-                                  planes_path,
-                                  voxel_size,
-                                  quantization_size,
-                                  num_points,
-                                  input_channels,
-                                  sample_stride=1,
-                                  split='valid'),
-                'test':
-                    KITTIInternal(radius,
-                                  root,
-                                  data_path,
-                                  crm_path,
-                                  labels_path,
-                                  calibs_path,
-                                  planes_path,
-                                  voxel_size,
-                                  quantization_size,
-                                  num_points,
-                                  input_channels,
-                                  sample_stride=1,
-                                  split='test')
-            })
-        else:
-            super(KITTI, self).__init__({
-                'train':
-                    KITTIInternal(radius,
-                                  root,
-                                  data_path,
-                                  crm_path,
-                                  labels_path,
-                                  calibs_path,
-                                  planes_path,
-                                  voxel_size,
-                                  quantization_size,
-                                  num_points,
-                                  input_channels,
-                                  sample_stride=1,
-                                  split='train',
-                                  google_mode=google_mode),
-                'valid':
-                    KITTIInternal(radius,
-                                  root,
-                                  data_path,
-                                  crm_path,
-                                  labels_path,
-                                  calibs_path,
-                                  planes_path,
-                                  voxel_size,
-                                  quantization_size,
-                                  num_points,
-                                  input_channels,
-                                  sample_stride=sample_stride,
-                                  split='valid'),
-                'test':
-                    KITTIInternal(radius,
-                                  root,
-                                  data_path,
-                                  crm_path,
-                                  labels_path,
-                                  calibs_path,
-                                  planes_path,
-                                  voxel_size,
-                                  quantization_size,
-                                  num_points,
-                                  input_channels,
-                                  sample_stride=sample_stride,
-                                  split='test')  #,
-                #'real_test': KITTIInternal(root, voxel_size, num_points, split='test')
-            })
-
+        super(KITTI, self).__init__({
+            'train':
+                KITTIInternal(radius,
+                              root,
+                              data_path,
+                              crm_path,
+                              labels_path,
+                              calibs_path,
+                              planes_path,
+                              voxel_size,
+                              quantization_size,
+                              num_points,
+                              input_channels,
+                              sample_stride=1,
+                              split='train',),
+            'valid':
+                KITTIInternal(radius,
+                              root,
+                              data_path,
+                              crm_path,
+                              labels_path,
+                              calibs_path,
+                              planes_path,
+                              voxel_size,
+                              quantization_size,
+                              num_points,
+                              input_channels,
+                              sample_stride=sample_stride,
+                              split='valid'),
+            'test':
+                KITTIInternal(radius,
+                              root,
+                              data_path,
+                              crm_path,
+                              labels_path,
+                              calibs_path,
+                              planes_path,
+                              voxel_size,
+                              quantization_size,
+                              num_points,
+                              input_channels,
+                              sample_stride=sample_stride,
+                              split='test')
+        })
 
 class KITTIInternal:
     def __init__(self,
@@ -135,9 +82,7 @@ class KITTIInternal:
                  num_points,
                  input_channels,
                  split,
-                 sample_stride=1,
-                 submit=False,
-                 google_mode=True):
+                 sample_stride=1,):
 
         self.radius = radius
         self.root = root
@@ -152,7 +97,6 @@ class KITTIInternal:
         self.num_points = num_points
         self.input_channels = input_channels
         self.sample_stride = sample_stride
-        self.google_mode = google_mode
 
         txt_path = '/'.join(self.data_path.split('/')[:-1])
         self.pcs = []
@@ -172,7 +116,6 @@ class KITTIInternal:
                 self.planes.append(os.path.join(self.root, self.planes_path, '%s.txt' % idx) )
                 self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
-        #elif split=="val":
         elif split=="valid":
             val_idxs = open( os.path.join(root, txt_path, "val.txt") ).readlines()
             val_idxs = val_idxs[:len(val_idxs)//2]
@@ -310,10 +253,14 @@ class KITTIInternal:
             if len(inds) > self.num_points:
                 inds = np.random.choice(inds, self.num_points, replace=False)
 
-        pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
-        feat = feat_[inds]
-        crm_target = crm_target_[inds]
-         
+            pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
+            feat = feat_[inds]
+            crm_target = crm_target_[inds]
+        """else:
+            pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
+            feat = feat_[inds]
+            crm_target = crm_target_[inds]
+        """
         lidar = SparseTensor(feat, pc) #unique
         crm_target = SparseTensor(crm_target, pc) #unique
         crm_target_ = SparseTensor(crm_target_, pc_) #voxelized original

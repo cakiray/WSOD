@@ -7,13 +7,9 @@ from core import utils
 
 class PeakStimulation(autograd.Function):
     @staticmethod
-    def forward(ctx, input, z_values, peak_threshold, win_size, peak_filter, return_aggregation=False):
+    def forward(ctx, input, win_size, peak_filter, return_aggregation=False):
         ctx.num_flags = 4
         assert win_size % 2 == 1, 'Window size for peak finding must be odd.'
-
-        # amplify Center Response Map values
-        # input is 3-channels torch as 1x1xN
-        # z_values is 3d point clouds forward(z in velo) direction values
 
         # peak finding by getting peak in windows
         offset = (win_size - 1) // 2
@@ -31,8 +27,6 @@ class PeakStimulation(autograd.Function):
         # peak filtering
         if peak_filter:
             mask = input >= peak_filter(input)
-            #mask_ = input >=peak_threshold
-            #mask = mask & mask_
             peak_map = (peak_map & mask)
         peak_list = torch.nonzero(peak_map)
         ctx.mark_non_differentiable(peak_list)
@@ -54,36 +48,31 @@ class PeakStimulation(autograd.Function):
         return (grad_input,) + (None,) * ctx.num_flags
 
 
-def peak_stimulation(input, z_values, peak_threshold, return_aggregation=True, win_size=3, peak_filter=None):
-    return PeakStimulation.apply(input, z_values, peak_threshold, win_size, peak_filter, return_aggregation)
+def peak_stimulation(input, return_aggregation=True, win_size=3, peak_filter=None):
+    return PeakStimulation.apply(input, win_size, peak_filter, return_aggregation)
     
-def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normalize=False):
+def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normalize=False):
     # PRM paper to calculate gradient
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
-    points = np.asarray(inputs.F[:,0:3].detach().cpu())
 
-    #print("\nmax and min values in CRM",torch.max(outputs).item(), torch.min(outputs).item())
-    #crmlog = outputs * torch.log(inputs.F[:,0]+1e-5)
-    #print("\nmax and min values in CRM log",torch.max(crmlog).item(), torch.min(crmlog).item()) 
-    
     valid_peak_response_map = []
-    peak_response_maps_con = np.zeros((inputs.F.shape))
+    peak_response_maps_con = torch.zeros(size=(inputs.shape[0],1))
+
     valid_peak_list = []
     avg_sum = 0.0
     for idx in range(peak_list.size(0)):
         peak_val = outputs[peak_list[idx, 0], peak_list[idx, 1], peak_list[idx, 2]]
         # if peak val * log(z_val) < peak_threshold
-        if peak_val * np.log(np.absolute( points[peak_list[idx,2], 0] + 1)) > peak_threshold:
+        # amplify Center Response Map values
+        # x is forward direction in velo
+        #if peak_val * np.log(np.absolute( points[peak_list[idx,2], 0] + 2)) > peak_threshold:
+        if peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2))[0] > peak_threshold:
             valid_peak_list.append(peak_list[idx])
-    #valid_peak_list = peak_list # peak elimination is in stimulation
+
     if len(valid_peak_list) == 0:
         return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
-    # Further point sampling
-    # peak_centers: 3D info of subsampled peaks, peak_list: subsampled peak_list
-    #peak_centers, valid_peak_list, valid_indexes = utils.FPS(valid_peak_list, points, num_frags=-1)
 
-    #for idx in range(peak_list.size(0)):
     for idx in range(len(valid_peak_list)):
         grad_output.zero_()
         # Set 1 to the max of predicted center points in gradient
@@ -97,13 +86,24 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
             grad_output[valid_peak_list[idx][0], valid_peak_list[idx][1], n] = 1
             #grad_output[peak_list[idx, 0], peak_list[idx, 1], n] = 1
         """
-        if inputs.F.grad is not None:
-            inputs.F.grad.zero_() # shape is N x input_channel_num , 2D
+        if inputs.grad is not None:
+            inputs.grad.zero_() # shape is N x input_channel_num , 2D
 
         # Calculate peak response maps backwarding the output
         outputs.backward(grad_output, retain_graph=True)
-        grad = inputs.F.grad # N x input_channel_num
+        grad = inputs.grad # N x input_channel_num
 
+        prm = torch.abs(grad)
+        if normalize:
+            prm = torch.max(prm, dim=1)
+            min = torch.min(prm[prm:torch.gt(0.0)])
+            max = torch.max(prm)
+            prm = torch.div( torch.sub(prm,min),(max-min))
+            prm = torch.clamp(prm, min=0.005, max=max)
+
+        valid_peak_response_map.append(prm)
+        peak_response_maps_con +=prm
+        """
         # PRM is absolute of all channels
         prm = grad.detach().cpu().clone()
         prm = np.asarray(np.absolute( prm )) # shape: N x input_channel_num, 2D
@@ -129,6 +129,6 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.08, normali
         #valid_peak_list contains indexes of valid peaks in center response map, shape: Mx3, e.g.[0,0,idx]
         #valid_peak_list.append(valid_peak_list[idx,:])
 
-
-    return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
+        """
+    return valid_peak_list, valid_peak_response_map, peak_response_maps_con
 

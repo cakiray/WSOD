@@ -35,12 +35,12 @@ class SemanticKITTITrainer(Trainer):
         print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
 
     def _run_step(self, feed_dict: Dict[str, Any]) -> Dict[str, Any]:   
-        _inputs = dict()
+        feed_dict_cuda = dict()
         for key, value in feed_dict.items():
-            if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
-                _inputs[key] = value.cuda()
+            if key in ['lidar', 'targets','inverse_map']:
+                feed_dict_cuda[key] = value.cuda()
 
-        inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
+        inputs = feed_dict_cuda['lidar'] # voxelized input, .C is point cloud (N,4)
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
         
         outputs = self.model(inputs) # voxelized output (N,1)
