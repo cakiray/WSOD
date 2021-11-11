@@ -101,7 +101,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
             max = torch.max(prm)
             #prm = torch.div(i torch.sub(prm,min),(max-min))
             prm = (prm-min)/(max-min)
-            print(prm.shape)
+            print(min, max)
             prm = torch.clamp(prm, min=0.005, max=max)
         
         prm = prm.view(-1,1).cpu()
