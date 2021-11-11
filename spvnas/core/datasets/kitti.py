@@ -252,7 +252,7 @@ class KITTIInternal:
         if 'train' in self.split:
             if len(inds) > self.num_points:
                 inds = np.random.choice(inds, self.num_points, replace=False)
-
+        if True:
             pc = pc_[inds] #unique coords, # pc[inverse_map] = _pc
             feat = feat_[inds]
             crm_target = crm_target_[inds]

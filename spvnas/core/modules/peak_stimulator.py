@@ -67,7 +67,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         # amplify Center Response Map values
         # x is forward direction in velo
         #if peak_val * np.log(np.absolute( points[peak_list[idx,2], 0] + 2)) > peak_threshold:
-        if peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2))[0] > peak_threshold:
+        if peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2)).item() > peak_threshold:
             valid_peak_list.append(peak_list[idx])
 
     if len(valid_peak_list) == 0:
@@ -95,12 +95,16 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
 
         prm = torch.abs(grad)
         if normalize:
-            prm = torch.max(prm, dim=1)
-            min = torch.min(prm[prm:torch.gt(0.0)])
+            prm = torch.max(prm, dim=1).values
+            print(prm.shape) 
+            min = torch.min(prm[torch.gt(prm,0.0)])
             max = torch.max(prm)
-            prm = torch.div( torch.sub(prm,min),(max-min))
+            #prm = torch.div(i torch.sub(prm,min),(max-min))
+            prm = (prm-min)/(max-min)
+            print(prm.shape)
             prm = torch.clamp(prm, min=0.005, max=max)
-
+        
+        prm = prm.view(-1,1).cpu()
         valid_peak_response_map.append(prm)
         peak_response_maps_con +=prm
         """

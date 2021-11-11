@@ -102,9 +102,10 @@ def main() -> None:
         # outputs are got 1-by-1 in test phase
         inputs.F.requires_grad = True
         outputs = model(inputs) # voxelized output (N,1)
-
-        inputs_F = inputs.F[feed_dict_cuda['inverse_map'].F]
-        outputs = outputs[feed_dict_cuda['inverse_map'].F]
+        print(feed_dict_cuda['inverse_map'].F.long().dtype)
+        #inputs.F = inputs.F[feed_dict_cuda['inverse_map'].F.long()]
+        #inputs_F.requires_grad = True
+        #outputs = outputs[feed_dict_cuda['inverse_map'].F.long()]
         #loss = criterion(outputs, targets)
         #print("\n\nloss: ", loss)
         # make outputs in shape [Batch_size, Channel_size, Data_size]
@@ -112,14 +113,20 @@ def main() -> None:
             outputs_bcn = outputs[None, : , :]
         outputs_bcn = outputs_bcn.permute(0,2,1)
         # peak backpropagation
-        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, peak_threshold=peak_threshold, return_aggregation=True, win_size=win_size,
+        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn,  return_aggregation=True, win_size=win_size,
                                                   peak_filter=model.module.mean_filter)
         #print( "\nPeak len", len(peak_list),aggregation.item())
 
         #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
-        peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs_F, outputs_bcn, peak_list,
+        peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs.F, outputs_bcn, peak_list,
                                                                                 peak_threshold=peak_threshold, normalize=True)
-
+        
+        print("shapes")
+        print(outputs.shape)
+        print(peak_response_maps_sum.shape)
+        peak_response_maps_sum = peak_response_maps_sum[feed_dict_cuda['inverse_map'].F.long()]
+        print(peak_response_maps_sum.shape)
+        
         if not os.path.exists(configs.outputs):
             os.mkdir(configs.outputs)
         np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), np.asarray( peak_response_maps_sum.detach().cpu()))
