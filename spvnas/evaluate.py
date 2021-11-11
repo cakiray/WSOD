@@ -18,7 +18,6 @@ from torchpack.utils.logging import logger
 
 from core import builder, utils
 from core.modules.peak_stimulator import *
-from core.calibration import Calibration
 
 from model_zoo import spvnas_specialized, spvcnn, spvnas_best, spvcnn_best, spvnas_cnn
 
@@ -44,6 +43,9 @@ def main() -> None:
 
     logger.info(' '.join([sys.executable] + sys.argv))
     logger.info(f'Experiment started: "{args.run_dir}".' + '\n' + f'{configs}')
+
+    if not os.path.exists(configs.outputs):
+        os.mkdir(configs.outputs)
 
     dataset = builder.make_dataset()
     dataflow = dict()
@@ -87,52 +89,37 @@ def main() -> None:
     t1_start = perf_counter()
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
-    n,r,p = 0,0,0
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
-        n += 1
         feed_dict_cuda = dict()
         for key, value in feed_dict.items():
-            if key in ['lidar', 'targets', 'inverse_map']:
+            if key in ['lidar', 'inverse_map']:
                 feed_dict_cuda[key] = value.cuda()
-        filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
-        inputs = feed_dict_cuda['lidar']
-        targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
 
+        filename = feed_dict['file_name'][0] # file is list with size 1, e.g 000000.bin
         #print("\ncurrent file: ", filename)
+        inputs = feed_dict_cuda['lidar']
+
         # outputs are got 1-by-1 in test phase
         inputs.F.requires_grad = True
         outputs = model(inputs) # voxelized output (N,1)
         print(feed_dict_cuda['inverse_map'].F.long().dtype)
-        #inputs.F = inputs.F[feed_dict_cuda['inverse_map'].F.long()]
-        #inputs_F.requires_grad = True
-        #outputs = outputs[feed_dict_cuda['inverse_map'].F.long()]
-        #loss = criterion(outputs, targets)
-        #print("\n\nloss: ", loss)
+
         # make outputs in shape [Batch_size, Channel_size, Data_size]
         if len(outputs.size()) == 2:
             outputs_bcn = outputs[None, : , :]
         outputs_bcn = outputs_bcn.permute(0,2,1)
         # peak backpropagation
-        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn,  return_aggregation=True, win_size=win_size,
-                                                  peak_filter=model.module.mean_filter)
-        #print( "\nPeak len", len(peak_list),aggregation.item())
-
+        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, win_size=win_size, peak_filter=model.module.mean_filter)
         #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
         peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs.F, outputs_bcn, peak_list,
                                                                                 peak_threshold=peak_threshold, normalize=True)
-        
-        print("shapes")
-        print(outputs.shape)
-        print(peak_response_maps_sum.shape)
-        peak_response_maps_sum = peak_response_maps_sum[feed_dict_cuda['inverse_map'].F.long()]
-        print(peak_response_maps_sum.shape)
-        
-        if not os.path.exists(configs.outputs):
-            os.mkdir(configs.outputs)
-        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), np.asarray( peak_response_maps_sum.detach().cpu()))
 
+        # convert the output Peak Response Maps to the original number of points
+        peak_response_maps_sum = peak_response_maps_sum[feed_dict_cuda['inverse_map'].F.long()]
+        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), peak_response_maps_sum.detach().numpy())
 
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
+
 if __name__ == '__main__':
     main()

@@ -54,26 +54,6 @@ class SemanticKITTITrainer(Trainer):
             self.scheduler.step()
         else:
             pass
-            """
-            #convertion from voxelized data to original size
-            invs = feed_dict['inverse_map']
-            all_labels = feed_dict['targets_mapped']
-            _outputs = []
-            _targets = []
-            for idx in range(invs.C[:, -1].max()+1):
-                cur_scene_pts = (inputs.C[:, -1] == idx).cpu().numpy()
-                cur_inv = invs.F[invs.C[:, -1] == idx].cpu().numpy()
-                cur_label = (all_labels.C[:, -1] == idx).cpu().numpy()
-                outputs_mapped = outputs[cur_scene_pts][
-                    cur_inv]# .argmax(1)
-                targets_mapped = all_labels.F[cur_label]
-                _outputs.append(outputs_mapped)
-                _targets.append(targets_mapped)
-            outputs = torch.cat(_outputs, 0)
-            targets = torch.cat(_targets, 0)                
-            #print(torch.min(outputs.cpu()), torch.max(outputs.cpu()))
-            """
-
         return {'outputs': outputs, 'targets': targets}
 
     def _after_epoch(self) -> None:
