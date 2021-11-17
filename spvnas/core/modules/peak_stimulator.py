@@ -71,7 +71,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
             valid_peak_list.append(peak_list[idx])
 
     if len(valid_peak_list) == 0:
-        return valid_peak_list, valid_peak_response_map, peak_response_maps_con, avg_sum
+        return valid_peak_list, valid_peak_response_map, peak_response_maps_con
 
     for idx in range(len(valid_peak_list)):
         grad_output.zero_()
@@ -99,7 +99,12 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
             min = torch.min(prm[torch.gt(prm,0.0)])
             max = torch.max(prm)
             prm = (prm-min)/(max-min)
-            prm = torch.clamp(prm, min=0.005, max=max)
+            nan_mask = torch.isnan(prm)
+            if nan_mask.any():
+                print("nanannn")
+            prm[nan_mask] = 0.0
+            #prm = torch.nan_to_num(prm, nan=0.0, posinf=0.0, neginf=0.0)
+            prm = torch.clamp(prm, min=0.005)
         
         prm = prm.view(-1,1).cpu()
         valid_peak_response_map.append(prm)

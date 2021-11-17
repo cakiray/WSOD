@@ -34,7 +34,7 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /dummy
 
-outputs: /data/Ezgi/CenterPoint-KITTI/data/kitti/training/prm
+outputs: /data/Ezgi/CenterPoint/data/kitti/testing/prm
 
 model:
   name: spvnas_cnn

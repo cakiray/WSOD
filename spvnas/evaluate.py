@@ -102,14 +102,14 @@ def main() -> None:
         # outputs are got 1-by-1 in test phase
         inputs.F.requires_grad = True
         outputs = model(inputs) # voxelized output (N,1)
-        print(feed_dict_cuda['inverse_map'].F.long().dtype)
 
         # make outputs in shape [Batch_size, Channel_size, Data_size]
         if len(outputs.size()) == 2:
             outputs_bcn = outputs[None, : , :]
         outputs_bcn = outputs_bcn.permute(0,2,1)
         # peak backpropagation
-        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, win_size=win_size, peak_filter=model.module.mean_filter)
+        _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, win_size=win_size, peak_filter=model.module.mean_filter,
+                return_aggregation=True)
         #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
         peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs.F, outputs_bcn, peak_list,
                                                                                 peak_threshold=peak_threshold, normalize=True)
