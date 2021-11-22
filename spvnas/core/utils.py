@@ -193,6 +193,17 @@ def bbox_recall(labels, idx_list): # RECALL = TP / TP + FN
         return -2
     return tp/(tp+fn)
 
+def tp_fn_peak(labels, bbox_found):
+    tp = 0
+    fn = 0
+    for i,label in enumerate(labels):
+        if label['type'] == b'Car':
+            if bbox_found[i] >0:
+                tp += 1
+            else:
+                fn += 1
+    return tp, fn
+
 def bbox_precision(labels, idx_list, fp): #PRECISION = TP / TP + FP
     tp = 0
     dontcare_noncar = 0

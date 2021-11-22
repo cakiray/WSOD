@@ -89,6 +89,8 @@ def main() -> None:
     t1_start = perf_counter()
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
+    tp, fn = 0,0
+
     for feed_dict in tqdm(dataflow[datatype], desc='eval'):
         feed_dict_cuda = dict()
         for key, value in feed_dict.items():
@@ -114,10 +116,32 @@ def main() -> None:
         peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs.F, outputs_bcn, peak_list,
                                                                                 peak_threshold=peak_threshold, normalize=True)
 
+        # Calculate recall of peak detection
+        calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
+        calibs = Calibration( calib_file )
+        #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
+        label_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'label_2', filename.replace('bin', 'txt'))
+        labels = utils.read_labels( label_file)
+        bbox_found = [0] * len(labels)
+        for p in peak_list:
+            peak_ind = p.cpu()
+            peak_coord = inputs.F[peak_ind[2]].item() # indx is at 3th element of peak variable
+            print("peak coord: " , peak_coord)
+            # Find bbox that the peak belongs to
+            from core.calibration import Calibration
+            _, bbox_idx = utils.find_bbox(peak_coord, labels, calibs)
+            if bbox_idx>=0:
+                bbox_found[bbox_idx] = 1
+
+        tp_, fn_ = utils.tp_fn_peak(labels, bbox_found)
+        tp += tp_
+        fn += fn_
         # convert the output Peak Response Maps to the original number of points
         peak_response_maps_sum = peak_response_maps_sum[feed_dict_cuda['inverse_map'].F.long()]
-        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), peak_response_maps_sum.detach().numpy())
 
+        #np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), peak_response_maps_sum.detach().numpy())
+
+    print("Recall (TP/(TP+FN)) of peaks detected in boxes: ", tp / (tp+fn))
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
 
