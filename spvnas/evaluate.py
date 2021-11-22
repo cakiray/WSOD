@@ -126,8 +126,7 @@ def main() -> None:
         bbox_found = [0] * len(labels)
         for p in peak_list:
             peak_ind = p.cpu()
-            peak_coord = inputs.F[peak_ind[2]].item() # indx is at 3th element of peak variable
-            print("peak coord: " , peak_coord)
+            peak_coord = inputs.F[peak_ind[2]].cpu().detach()[0:3] # indx is at 3th element of peak variable
             # Find bbox that the peak belongs to
             _, bbox_idx = utils.find_bbox(peak_coord, labels, calibs)
             if bbox_idx>=0:
