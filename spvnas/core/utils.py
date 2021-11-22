@@ -6,7 +6,7 @@ import open3d
 import torch 
 #from core.nms_gpu import nms_gpu
 
-__all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner', 'iou',
+__all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner',
             'generate_car_masks',  'generate_prm_mask', 'FPS', 'KNN']
 
 def load_pc(f):
@@ -101,60 +101,6 @@ def box_center_to_corner(data, calibs):
         corner_box[i]= calibs.project_rect_to_velo(np.array([corner_box[i]]))
     return corner_box
 
-
-def iou(preds, targets, n_classes=2):
-    ious = np.zeros(n_classes)
-    pred = preds.reshape(-1,1)
-    target = targets.reshape(-1,1)
-    for cls in range(0, n_classes):
-        pred_inds = pred == cls
-        target_inds = target == cls
-        intersection = (pred_inds[target_inds]).sum()  # Cast to long to prevent overflows
-
-        union = pred_inds.astype(np.int_).sum() + target_inds.astype(np.int_).sum() - intersection
-        if union == 0:
-            ious[cls] = float('nan')  # If there is no ground truth, do not include in evaluation
-        else:
-            ious[cls] = float(intersection) / float(max(union, 1))
-
-    return np.array(ious)
-
-def iou_precision(peak, points, preds, labels, calibs, n_classes=2):
-    precision = np.zeros(n_classes)
-    peak = points[peak[2]]
-    bbox_label, bbox_idx = find_bbox(peak, labels, calibs)
-    if bbox_label:
-        prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
-    else:
-        prm_target = np.zeros_like(preds)
-    for cls in range(n_classes):
-        preds_inds = preds==cls
-        target_inds = prm_target==cls
-        tp = (preds_inds[target_inds]).sum()
-        fp = preds_inds.sum()-tp
-        precision[cls] = float(tp / (fp+tp))
-
-    return np.array(precision)
-
-
-def iou_recall(peak, points, preds, labels, calibs, n_classes=2):
-    recall = np.zeros(n_classes)
-    peak = points[peak[2]] # indx is at 3th element of peak variable
-    bbox_label, bbox_idx = find_bbox(peak, labels, calibs)
-    if bbox_label:
-        prm_target = generate_car_masks(points, bbox_label, calibs).reshape(-1)
-    else:
-        prm_target = np.zeros_like(preds)
-    for cls in range(n_classes):
-        preds_inds = preds==cls
-        target_inds = prm_target==cls
-        non_pred_inds = preds!=cls
-        tp = (preds_inds[target_inds]).sum()
-        fn = non_pred_inds[target_inds].sum()
-        recall[cls] = float(tp / (tp+fn))
-
-    return np.array(recall)
-
 def find_bbox(point, labels, calibs, class_='Car'):
     bboxes = get_bboxes(labels=labels, calibs=calibs)
     i=-1
@@ -173,25 +119,7 @@ def find_bbox(point, labels, calibs, class_='Car'):
 
     return None, -1
 
-def bbox_recall(labels, idx_list): # RECALL = TP / TP + FN
-    tp = 0
-    fn = 0
-    dontcare_noncar = 0
-    num_bbox = len(labels)
-    for i,label in enumerate(labels):
-        if label['type'] == b'Car':
-            if idx_list[i] >0:
-                tp += 1
-            else:
-                fn += 1
-        else:
-            dontcare_noncar += 1
-
-    # no bbox to detect
-    if dontcare_noncar == num_bbox:
-        return -2
-    return tp/(tp+fn)
-
+# Return TP and FN number of peaks detected for car
 def tp_fn_peak(labels, bbox_found):
     tp = 0
     fn = 0
@@ -203,42 +131,8 @@ def tp_fn_peak(labels, bbox_found):
                 fn += 1
     return tp, fn
 
-def bbox_precision(labels, idx_list, fp): #PRECISION = TP / TP + FP
-    tp = 0
-    dontcare_noncar = 0
-    num_bbox = len(labels)
-    for i,label in enumerate(labels):
-        if label['type'] == b'Car':
-            if idx_list[i] >0:
-                tp += 1
-        else:
-            dontcare_noncar += 1
-            if idx_list[i]>0:
-                fp += 1
-
-    # no bbox to detect or no peak is detected
-    if dontcare_noncar == num_bbox or tp+fp == 0:
-        return -2
-    return tp/(tp+fp)
-
-def get_detected_bbox_num(labels, idx_list):
-    tp = 0
-    dontcare_noncar = 0
-    num_bbox = len(labels)
-    for i,label in enumerate(labels):
-        if label['type'] == b'Car':
-            if idx_list[i] >0:
-                tp += 1
-        else:
-            dontcare_noncar += 1
-
-    valid_bbox_num = num_bbox-dontcare_noncar
-    detected_bbox_num = tp
-    return detected_bbox_num, valid_bbox_num
-
 def generate_car_masks(points, labels, calibs):
     points = np.asarray(points)
-    #points = points[points[:,0]>0]
     bboxes = get_bboxes(labels=labels, calibs=calibs)
     map = np.zeros((points.shape[0], 1))
     i=-1
@@ -335,6 +229,8 @@ def FPS(peaks_idxs, points,  num_frags=-1):
     new_peak_centers = []
     new_valid_peak_list = []
     new_valid_indexes = []
+
+    """
     #Eliminate points close each other more that 2.5 mt
     for i,center in enumerate(peak_centers):
         far = True
@@ -344,11 +240,11 @@ def FPS(peaks_idxs, points,  num_frags=-1):
                 far=False
                 break
                 
-        if True:#far:
+        if far:
             new_peak_centers.append(center)
             new_valid_peak_list.append(valid_peak_list[i])
             new_valid_indexes.append(valid_indexes[i])
-    
+    """
     return np.asarray(new_peak_centers), np.asarray(new_valid_peak_list), np.asarray(new_valid_indexes)
 
 def L2dist_2d(p1, p2):
@@ -399,39 +295,31 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         bbox_oriented = bbox_oriented.create_from_points(pc_or)
         #bbox_oriented.extent # extension of convex hull on x,y,z
         R = bbox_oriented.R
-        #print(np.linalg.det(R))
         if  np.linalg.det(R) < 0:
            R = -R
-        #else:
-        if True:
-            #orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
-            #ry = orientation_vector[0]
-            from pyquaternion import Quaternion
-            quat = Quaternion(matrix=R)
-            ry = quat.radians #+ np.pi/2
-            if quat.get_axis(undefined=[0,0,0])[2] == -1:
-                ry += np.pi/2
-            else:
-                ry -= np.pi/2
-            #print("axis ", quat.get_axis(undefined=[-2,-2,-2]))
-            #print("ry: ", ry)
+
+        #orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
+        #ry = orientation_vector[0]
+        from pyquaternion import Quaternion
+        quat = Quaternion(matrix=R)
+        ry = quat.radians #+ np.pi/2
+        if quat.get_axis(undefined=[0,0,0])[2] == -1:
+            ry += np.pi/2
+        else:
+            ry -= np.pi/2
         
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
-        #print("center of bbox: ", np_center)
         #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
 
         """
         rect, R, center_velo, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
         
-        #print("corners rect from lfit: ", corners_rect)
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
-        #print("center from lfit: ", center_velo)
 
         ry = quat.radians + np.pi/2
-        #print("ry ", ry)
         #np_center = calibs.project_velo_to_rect(center)
         """
         """
@@ -446,22 +334,17 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
         w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
         
-        # Set center as peak's location
-        np_center =np.asarray( points[ peak_list[i][2], 0:3]).reshape(1,3) #in velo
-        np_center = calibs.project_velo_to_rect(np_center) #  in rect
         """
         #3D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
-        #print("corners self calc: ", np_corners)
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
         #y = y- h/2 # bbox.center up comes  negative, so normally I add h/2 to it, but now it is 0
 
-        #ry = np.pi/2 # pi/2 works prototype placing in general # rotation along y axis is set to 0 for now
+        #ry = np.pi/2 # pi/2 works prototype placing in general
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
-        #score = crm[peak_list[i][2]].item() * points[peak_list[i][2],0] / 5 # confidence score
         score = (crm[peak_list[i][2]].item()+ response[peak_list[i][2]] )/2 # np.log( points[peak_list[i][2],0])
         # kitti format is
         #  type of object 'Car', 'Van', 'Truck', 'Pedestrian', 'Person_sitting', 'Cyclist', 'Tram','Misc' or 'DontCare'
@@ -492,6 +375,7 @@ def get_corners(center): #center is numpy array in rect coords, [x,y,z]
                         [x-h/2, y+w/2, z+l/2]])
     return corners
 
+# NMS in image view
 def non_maximum_supression(bboxs_raw):
     dets = np.zeros(shape=(len(bboxs_raw), 5))
 
@@ -546,7 +430,6 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     kitti_format_list = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
     kept_idxs = non_maximum_supression(kitti_format_list)
-    #print(f"\n len kept: {len(kept_idxs)}, len original: {len(peak_list)}")
 
     with open(kitti_output_file, 'w') as f:
         for idx in kept_idxs:
@@ -558,6 +441,7 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
            img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
            """
     return kept_idxs
+
 #https://github.com/Silas-Asamoah/Lshape-fitting/tree/f2fc4e52d8c0e7203c36b3fcf4a9d50fa7132003
 def _rectangle_search( x, y):
 
@@ -621,9 +505,6 @@ def _rectangle_search( x, y):
     corners_velo = np.asarray([c1,c2,c3,c4])
 
     center = np.asarray( [(c1[0]+c3[0])/2, (c1[1]+c3[1])/2])
-    #print("R in rect search: " , R)
-    #print("corners velo: ", corners_velo)
-    #print("center velo: ", center)
 
     return rect, R, center, corners_velo
 
@@ -693,20 +574,3 @@ def _calc_variance_criterion( c1, c2):
     gamma = V1 + V2
 
     return gamma
-
-def assignAvgofNeighbors(points, prm, k=10):
-    for i in prm:
-        knn_list = KNN(points=points, anchor=i, k=k)
-        positive = True
-        for n in knn_list:
-            if prm[n,0] <0:
-                positive=False
-        if positive:
-            prm[n] = np.average(np.array( [prm[t] for t in knn_list] ))
-
-    return prm
-
-# maxpool of Peak Response Map columns
-def maxpool(prm):
-    new_prm = np.amax(prm,axis=1).reshape(-1,1) #maxs columns-wise
-    return new_prm

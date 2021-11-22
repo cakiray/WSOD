@@ -3,7 +3,6 @@ import numpy as np
 
 def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scale_factor ):
     vehicles = [ b'Car']
-
     labels = read_labels( labels_path )
     calibs = read_calibs( calibs_path)
     map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
@@ -12,43 +11,27 @@ def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scal
             # x -> l, y -> w, z -> h
             # Convert camera(image) coordinates to laser point cloud coordinates in meters
             center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
-            
             center = np.dot(center, rot_mat) * scale_factor
+            point_3d = np.dot(points[:,0:3], rot_mat) * scale_factor
+            points[:,0:3] = point_3d
             # Center point
             x = center[0][0]
             y = center[0][1]
             z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
             center = [x,y,z]
 
+            # 1-(x/radius)
             crm =  get_distance(points, center, _in3d = False)
             crm =  standardize(crm, threshold=radius)
             crm = substact_1(crm)
 
-            map += crm
-
-    return map
-
-def generate_CRM(radius, labels, points, calibs, rot_mat, scale_factor ):
-    vehicles = [ b'Car']
-    points[:, :3] = np.dot(points[:, :3], rot_mat) * scale_factor
-    points = points.cpu()
-    map = np.zeros((points.shape[0], 1), dtype=np.float32) #we will only update first column
-    for label in labels:
-        if label['type'] in vehicles:
-            # x -> l, y -> w, z -> h
-            # Convert camera(image) coordinates to laser point cloud coordinates in meters
-            center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
-            center = np.dot(center, rot_mat) * scale_factor
-
-            # Center point
-            x = center[0][0]
-            y = center[0][1]
-            z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
-            center = [x,y,z]
-
+            """
+            # e ^ -(x/radius)^2)
             crm =  get_distance(points, center, _in3d = False)
             crm =  standardize(crm, threshold=radius)
-            crm = substact_1(crm)
+            crm = -1*(crm ** 2).reshape(-1,1)
+            crm = np.exp(crm).reshape(-1,1)
+            """
 
             map += crm
 

@@ -217,9 +217,7 @@ class KITTIInternal:
         if self.input_channels == 5:
              height = self.align_pcd(pc=block_, plane_file=self.planes[index])
              block_ = np.concatenate( (block_, height.reshape(-1,1)), axis=1)
-             
-        #crm_target_ = np.load( self.crm_pcs[index]).astype(float)
-    
+
         # Data augmentation
         scale_factor = 1.0
         rot_mat = np.array([[1,0, 0],
@@ -267,12 +265,8 @@ class KITTIInternal:
             'targets': crm_target,
             'targets_mapped': crm_target_,
             'inverse_map': inverse_map,
-            'calibs': self.calibs[index],
-            'labels': self.labels[index],
-            'pc_file': self.pcs[index],
             'rot_mat': rot_mat,
             'scale_factor': scale_factor,
-            'subsize': len(inds),
             'file_name': self.pcs[index].split('/')[-1] #e.g. 000000.bin 
         }
 

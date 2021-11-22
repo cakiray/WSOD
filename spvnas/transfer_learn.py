@@ -103,8 +103,7 @@ def main() -> None:
                                    optimizer=optimizer,
                                    scheduler=scheduler,
                                    num_workers=configs.workers_per_gpu,
-                                   seed=configs.train.seed,
-                                   out_save_dir=configs.outputs)
+                                   seed=configs.train.seed)
                                    
     if args.weights is not None:
         trainer._load_state_dict(torch.load(args.weights))

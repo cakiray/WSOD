@@ -107,8 +107,7 @@ def main() -> None:
                                        optimizer=optimizer,
                                        scheduler=scheduler,
                                        num_workers=configs.workers_per_gpu,
-                                       seed=configs.train.seed,
-                                       out_save_dir=configs.outputs)
+                                       seed=configs.train.seed)
         trainer.train_with_defaults(
             dataflow['train'],
             num_epochs= epoch_interval,# configs.num_epochs,

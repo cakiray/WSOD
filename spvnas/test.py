@@ -96,7 +96,6 @@ def main() -> None:
                                    scheduler=scheduler,
                                    num_workers=configs.workers_per_gpu,
                                    seed=configs.train.seed,
-                                   out_save_dir=configs.outputs,
                                    tfevent=configs.tfevent,
                                    tfeventname=configs.tfeventname)
     callbacks=Callbacks([

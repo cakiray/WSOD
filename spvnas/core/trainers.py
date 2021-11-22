@@ -5,7 +5,6 @@ import torch
 from torch import nn
 from torchpack.train import Trainer
 from torchpack.utils.typing import Optimizer, Scheduler
-#from modules.peak_stimulator import peak_stimulator, prm_backpropagation
 
 __all__ = ['SemanticKITTITrainer']
 
@@ -13,7 +12,7 @@ __all__ = ['SemanticKITTITrainer']
 class SemanticKITTITrainer(Trainer):
     def __init__(self, model: nn.Module, criterion: Callable,
                  optimizer: Optimizer, scheduler: Scheduler,
-                 num_workers: int, seed: int, out_save_dir: str,
+                 num_workers: int, seed: int,
                  tfevent:str=None, tfeventname:str=None, checkpoint=None) -> None:
         self.model = model
         self.criterion = criterion
@@ -22,7 +21,6 @@ class SemanticKITTITrainer(Trainer):
         self.num_workers = num_workers
         self.seed = seed
         self.epoch_num = 1
-        self.out_save_dir = out_save_dir
         self.tfevent = tfevent
         self.tfeventname = tfeventname
         self.checkpoint = checkpoint

@@ -1,9 +1,7 @@
 import torch
-import math
 import numpy as np
 import torch.nn.functional as F
 from torch import autograd
-from core import utils
 
 class PeakStimulation(autograd.Function):
     @staticmethod
@@ -56,8 +54,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
     grad_output = outputs.new_empty(outputs.size())
     grad_output.zero_()
 
-    valid_peak_response_map = []
-    peak_response_maps_con = torch.zeros(size=(inputs.shape[0],1))
+    valid_prm = []
+    prm_sum = torch.zeros(size=(inputs.shape[0],1))
 
     valid_peak_list = []
     avg_sum = 0.0
@@ -66,12 +64,11 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         # if peak val * log(z_val) < peak_threshold
         # amplify Center Response Map values
         # x is forward direction in velo
-        #if peak_val * np.log(np.absolute( points[peak_list[idx,2], 0] + 2)) > peak_threshold:
         if peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2)).item() > peak_threshold:
             valid_peak_list.append(peak_list[idx])
 
     if len(valid_peak_list) == 0:
-        return valid_peak_list, valid_peak_response_map, peak_response_maps_con
+        return valid_peak_list, valid_prm, prm_sum
 
     for idx in range(len(valid_peak_list)):
         grad_output.zero_()
@@ -100,15 +97,12 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
             max = torch.max(prm)
             prm = (prm-min)/(max-min)
             nan_mask = torch.isnan(prm)
-            if nan_mask.any():
-                print("nanannn")
             prm[nan_mask] = 0.0
-            #prm = torch.nan_to_num(prm, nan=0.0, posinf=0.0, neginf=0.0)
-            prm = torch.clamp(prm, min=0.005)
+            prm[torch.lt(prm,0.005)] = 0.0
         
         prm = prm.view(-1,1).cpu()
-        valid_peak_response_map.append(prm)
-        peak_response_maps_con +=prm
+        valid_prm.append(prm)
+        prm_sum +=prm
 
-    return valid_peak_list, valid_peak_response_map, peak_response_maps_con
+    return valid_peak_list, valid_prm, prm_sum
 

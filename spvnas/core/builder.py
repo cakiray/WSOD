@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-def make_dataset(radius=2) -> Dataset:
+def make_dataset() -> Dataset:
     if configs.dataset.name == 'semantic_kitti':
         from core.datasets import SemanticKITTI
         dataset = SemanticKITTI(root=configs.dataset.root,
@@ -21,7 +21,7 @@ def make_dataset(radius=2) -> Dataset:
                         voxel_size=configs.dataset.voxel_size)
     elif configs.dataset.name == 'kitti':
         from core.datasets import KITTI
-        dataset = KITTI(radius = radius,
+        dataset = KITTI(radius = configs.dataset.radius,
                         root=configs.dataset.root,
                         data_path=configs.dataset.data_path,
                         crm_path=configs.dataset.crm_path,
