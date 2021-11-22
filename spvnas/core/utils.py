@@ -4,7 +4,8 @@ import numpy as np
 import struct
 import open3d
 import torch
-import torchvision.ops.nms as nms
+#import torchvision.ops.nms as nms
+import torchvision as tv
 #from core.nms_gpu import nms_gpu
 
 __all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner',
@@ -374,20 +375,20 @@ def get_corners(center): #center is numpy array in rect coords, [x,y,z]
     return corners
 
 def nms_torchvision(bboxes_raw):
-    box_info = torch.zeros((bboxes_raw.shape[0],4))
-    scores = torch.zeros((bboxes_raw.shape[0]))
+    box_info = torch.zeros((len(bboxes_raw),4))
+    scores = torch.zeros((len(bboxes_raw)))
     for i,bbox in enumerate(bboxes_raw):
-        box_info[i,0] = bbox[3]# x1
-        box_info[i,1] = bbox[4]# x2
-        box_info[i,2] = bbox[5]# y1
-        box_info[i,3] = bbox[6]# y2
+        box_info[i,0] = bbox[2]# x1
+        box_info[i,1] = bbox[3]# x2
+        box_info[i,2] = bbox[4]# y1
+        box_info[i,3] = bbox[5]# y2
         #0<=x1<x2, 0<=y1<y2
         scores[i] = bbox[-1]
-    print("box info")
+    
     box_info = box_info.to(device = torch.cuda.current_device())
     scores = scores.to(device = torch.cuda.current_device())
-    kept_idxs = nms(boxes=box_info, scores=scores, iou_threshold=0.7 )
-    print(kept_idxs, len(bboxes_raw))
+    kept_idxs = tv.ops.nms(boxes=box_info, scores=scores, iou_threshold=0.3 )
+    
     return kept_idxs
 
 # NMS in image view

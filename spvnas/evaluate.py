@@ -129,7 +129,7 @@ def main() -> None:
         labels = utils.read_labels( label_file)
         
 
-        #kept_idxs = utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=inputs.F[:,0:3].cpu().detach().numpy(),
+        kept_idxs = utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=inputs.F[:,0:3].cpu().detach().numpy(),
                                                crm=outputs, peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
         """
         bbox_found = [0] * len(labels)
