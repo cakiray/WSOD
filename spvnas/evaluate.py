@@ -113,9 +113,10 @@ def main() -> None:
         _ , peak_list, aggregation = peak_stimulation(input=outputs_bcn, win_size=win_size, peak_filter=model.module.mean_filter,
                 return_aggregation=True)
         #peak_list: [0,0,indx], peak_responses=list of peak responses, peak_response_maps_sum: sum of all peak_responses
-        peak_list, peak_responses, peak_response_maps_sum = prm_backpropagation(inputs.F, outputs_bcn, peak_list,
+        peak_list, peak_responses, prm_sum = prm_backpropagation(inputs.F, outputs_bcn, peak_list,
                                                                                 peak_threshold=peak_threshold, normalize=True)
 
+        """
         # Calculate recall of peak detection
         from core.calibration import Calibration
         calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
@@ -135,12 +136,14 @@ def main() -> None:
         tp_, fn_ = utils.tp_fn_peak(labels, bbox_found)
         tp += tp_
         fn += fn_
+        """
         # convert the output Peak Response Maps to the original number of points
-        peak_response_maps_sum = peak_response_maps_sum[feed_dict_cuda['inverse_map'].F.long()]
+        prm_sum = prm_sum[feed_dict_cuda['inverse_map'].F.long()]
+        #print(np.all(prm_sum.detach().numpy()>=0.0), np.all(prm_sum.detach().numpy()<=1.0))
+        
+        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), prm_sum.detach().numpy())
 
-        #np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), peak_response_maps_sum.detach().numpy())
-
-    print("Recall (TP/(TP+FN)) of peaks detected in boxes: ", tp / (tp+fn))
+    #print("Recall (TP/(TP+FN)) of peaks detected in boxes: ", tp / (tp+fn))
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
 

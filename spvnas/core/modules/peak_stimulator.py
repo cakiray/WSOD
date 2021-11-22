@@ -69,7 +69,8 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
 
     if len(valid_peak_list) == 0:
         return valid_peak_list, valid_prm, prm_sum
-
+    
+    prm_max = torch.zeros(size=(inputs.shape[0],1)).to(outputs.device)
     for idx in range(len(valid_peak_list)):
         grad_output.zero_()
         # Set 1 to the max of predicted center points in gradient
@@ -100,9 +101,13 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
             prm[nan_mask] = 0.0
             prm[torch.lt(prm,0.005)] = 0.0
         
-        prm = prm.view(-1,1).cpu()
-        valid_prm.append(prm)
-        prm_sum +=prm
-
-    return valid_peak_list, valid_prm, prm_sum
+        prm = prm.view(-1,1)
+    
+        prm_max = torch.max(torch.cat( (prm_max, prm), 1 ), dim=1).values.view(-1,1)
+        
+        valid_prm.append(prm.cpu())
+        
+        #prm_sum +=prm
+    prm_max = prm_max.cpu()
+    return valid_peak_list, valid_prm, prm_max# prm_sum
 

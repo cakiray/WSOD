@@ -19,8 +19,9 @@ dataset:
   num_points: 80000
   voxel_size: 0.05
   quantization_size: 3
-  
-num_epochs: 15
+  radius: 3
+
+num_epochs: 5
 prm:
   win_size: 5
   peak_threshold: 0.8
@@ -34,7 +35,7 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /dummy
 
-outputs: /data/Ezgi/CenterPoint/data/kitti/testing/prm
+outputs: /data/Ezgi/CenterPoint/data/kitti_prm/training/prm
 
 model:
   name: spvnas_cnn
@@ -45,7 +46,7 @@ criterion:
 
 optimizer:
   name: adam
-  lr: 1.0e-2
+  lr: 1.0e-3
   weight_decay: 0.0
   momentum: 0.9
   nesterov: true

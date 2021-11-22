@@ -127,7 +127,7 @@ class KITTIInternal:
                 self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
         elif split=="test":
-            val_idxs = open( os.path.join(root, txt_path, "test1000.txt") ).readlines()
+            val_idxs = open( os.path.join(root, txt_path, "train500.txt") ).readlines()
             #val_idxs = val_idxs[len(val_idxs)//2:]
             for idx in val_idxs:
                 idx = idx.strip()
