@@ -3,7 +3,8 @@ import os
 import numpy as np
 import struct
 import open3d
-import torch 
+import torch
+import torchvision.ops.nms as nms
 #from core.nms_gpu import nms_gpu
 
 __all__ = [ 'load_pc', 'read_bin_velodyne', 'read_labels' , 'read_points' , 'get_bboxes', 'box_center_to_corner',
@@ -265,8 +266,7 @@ def KNN(points, anchor, k=10):
 def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
     bboxs_raw = []
     for i,response in enumerate(peak_responses):
-
-        #dimension are of prototype
+        #dimension are of anchor
         h,w,l = 1.52563191462, 1.62856739989, 3.88311640418
 
         mask = response.flatten()>0.0
@@ -277,8 +277,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         pc_ = open3d.utility.Vector3dVector(obj_mask)
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
-        
-        
+
         # To calculate rotation around z(up):
         # Set z=0 and z=1 for all points in the object mask
         # Calculate rotation matrix R, orthogonal unit-vectors pointing on rotated x, y and z directions
@@ -340,9 +339,8 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
 
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
-        #y = y- h/2 # bbox.center up comes  negative, so normally I add h/2 to it, but now it is 0
 
-        #ry = np.pi/2 # pi/2 works prototype placing in general
+        #ry = np.pi/2 # pi/2 if ry is not calculated
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
         score = (crm[peak_list[i][2]].item()+ response[peak_list[i][2]] )/2 # np.log( points[peak_list[i][2],0])
@@ -374,6 +372,23 @@ def get_corners(center): #center is numpy array in rect coords, [x,y,z]
                         [x+h/2, y-w/2, z+l/2],
                         [x-h/2, y+w/2, z+l/2]])
     return corners
+
+def nms_torchvision(bboxes_raw):
+    box_info = torch.zeros((bboxes_raw.shape[0],4))
+    scores = torch.zeros((bboxes_raw.shape[0]))
+    for i,bbox in enumerate(bboxes_raw):
+        box_info[i,0] = bbox[3]# x1
+        box_info[i,1] = bbox[4]# x2
+        box_info[i,2] = bbox[5]# y1
+        box_info[i,3] = bbox[6]# y2
+        #0<=x1<x2, 0<=y1<y2
+        scores[i] = bbox[-1]
+    print("box info")
+    box_info = box_info.to(device = torch.cuda.current_device())
+    scores = scores.to(device = torch.cuda.current_device())
+    kept_idxs = nms(boxes=box_info, scores=scores, iou_threshold=0.7 )
+    print(kept_idxs, len(bboxes_raw))
+    return kept_idxs
 
 # NMS in image view
 def non_maximum_supression(bboxs_raw):
@@ -429,8 +444,8 @@ def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_res
 
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     kitti_format_list = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
-    kept_idxs = non_maximum_supression(kitti_format_list)
-
+    #kept_idxs = non_maximum_supression(kitti_format_list)
+    kept_idxs = nms_torchvision(kitti_format_list)
     with open(kitti_output_file, 'w') as f:
         for idx in kept_idxs:
             kitti_format = kitti_format_list[idx]
