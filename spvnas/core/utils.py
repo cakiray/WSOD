@@ -66,7 +66,6 @@ def get_bboxes( labels, calibs):
             ry = data['rotation_y'] # yaw angle (around Y-axis in camera coordinates) [-pi..pi]
             xyz = np.array([[x,y,z]])
             t = (xyz[0][0], xyz[0][1], xyz[0][2])  # location (x,y,z) in camera coord.
-            print("ry ", ry)
             bbox = [h,w,l,t,ry]
             bboxes.extend(box_center_to_corner(bbox, calibs))
 
