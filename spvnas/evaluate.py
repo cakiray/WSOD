@@ -117,6 +117,7 @@ def main() -> None:
                                                                                 peak_threshold=peak_threshold, normalize=True)
 
         # Calculate recall of peak detection
+        from core.calibration import Calibration
         calib_file = os.path.join (configs.dataset.root, '/'.join(configs.dataset.data_path.split('/')[:-1]) , 'calib', filename.replace('bin', 'txt'))
         calibs = Calibration( calib_file )
         #configs.data_path = ..samepath/velodyne, so remove /velodyne and add /label_2
@@ -128,7 +129,6 @@ def main() -> None:
             peak_coord = inputs.F[peak_ind[2]].item() # indx is at 3th element of peak variable
             print("peak coord: " , peak_coord)
             # Find bbox that the peak belongs to
-            from core.calibration import Calibration
             _, bbox_idx = utils.find_bbox(peak_coord, labels, calibs)
             if bbox_idx>=0:
                 bbox_found[bbox_idx] = 1
