@@ -22,7 +22,9 @@ dt_annos = kitti.get_label_annos(det_path)
 gt_path = args.gt_path
 gt_split_file = args.val_txt
 val_image_ids = _read_imageset_file(gt_split_file)
-val_image_ids = val_image_ids[len(val_image_ids)//2:]
+
+#val_image_ids = val_image_ids[len(val_image_ids)//2:]
+
 gt_annos = kitti.get_label_annos(gt_path, val_image_ids)
 class_ = 0 # CAR
 print(get_official_eval_result(gt_annos, dt_annos, class_))
