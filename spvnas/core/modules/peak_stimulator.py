@@ -94,9 +94,14 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         prm = torch.abs(grad)
         if normalize:
             prm = torch.max(prm, dim=1).values
-            min = torch.min(prm[torch.gt(prm,0.0)])
-            max = torch.max(prm)
-            prm = (prm-min)/(max-min)
+            #min = torch.min(prm[torch.gt(prm,0.0)])
+            #max = torch.max(prm)
+            #prm = (prm-min)/(max-min)
+            object_mask = [torch.gt(prm,0.0)]
+            mean = torch.mean(prm[object_mask])
+            std = torch.std(prm[object_mask])
+            prm = (prm-mean)/std
+
             nan_mask = torch.isnan(prm)
             prm[nan_mask] = 0.0
             prm[torch.lt(prm,0.005)] = 0.0
