@@ -12,14 +12,15 @@ def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scal
             # Convert camera(image) coordinates to laser point cloud coordinates in meters
             center = project_rect_to_velo(calibs, np.array([[label['x'], label['y'], label['z']]]))
             center = np.dot(center, rot_mat) * scale_factor
-            point_3d = np.dot(points[:,0:3], rot_mat) * scale_factor
-            points[:,0:3] = point_3d
+            #point_3d = np.dot(points[:,0:3], rot_mat) * scale_factor
+            #points[:,0:3] = point_3d
             # Center point
             x = center[0][0]
             y = center[0][1]
             z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
             center = [x,y,z]
 
+        
             # 1-(x/radius)
             crm =  get_distance(points, center, _in3d = False)
             crm =  standardize(crm, threshold=radius)
@@ -30,11 +31,10 @@ def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scal
             crm =  get_distance(points, center, _in3d = False)
             crm =  standardize(crm, threshold=radius)
             crm = -1*(crm ** 2).reshape(-1,1)
-            crm = np.exp(crm).reshape(-1,1)
+            crm = np.exp(crm).reshape(-1,1) 
             """
-
             map += crm
-
+    
     return map
 
 def read_labels( label_path):

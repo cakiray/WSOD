@@ -72,7 +72,7 @@ def main() -> None:
             shuffle=(split == 'train'))
         dataflow[split] = torch.utils.data.DataLoader(
             dataset[split],
-            batch_size=configs.batch_size if split=='train' else 1,
+            batch_size=configs.batch_size,
             sampler=sampler,
             num_workers=configs.workers_per_gpu,
             pin_memory=True,
@@ -142,7 +142,7 @@ def main() -> None:
                       TFEventWriter(save_dir=configs.tfevent+configs.tfeventname)
                   ]
     )
-
+    """
     win_size = configs.prm.win_size # 5
     peak_threshold =  configs.prm.peak_threshold # 0.5
     tp, fn = 0,0
@@ -198,6 +198,6 @@ def main() -> None:
     print("Recall (TP/(TP+FN)) of peaks detected in boxes: ", tp / (tp+fn))
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:", t1_stop-t1_start)
-
+    """
 if __name__ == '__main__':
     main()

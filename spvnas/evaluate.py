@@ -118,7 +118,14 @@ def main() -> None:
                                                                                 peak_threshold=peak_threshold, normalize=True)
         # convert the output Peak Response Maps to the original number of points
         prm_sum = prm_sum[feed_dict_cuda['inverse_map'].F.long()]
-        np.save( os.path.join(configs.outputs, filename.replace('bin', 'npy')), prm_sum.detach().numpy())
+        #np.save( os.path.join(configs.outputs, filename.replace('.bin', '_crm.npy')), np.concatenate( (inputs.F.cpu().detach().numpy(), outputs.cpu().detach().numpy()) , axis=1 ) )
+        np.save( os.path.join(configs.outputs, filename.replace('.bin', '.npy')), prm_sum.detach().numpy())
+        """
+        i=0
+        for prm in peak_responses:
+            i+=1
+
+            #np.save( os.path.join(configs.outputs, filename.replace('.bin', f'_prm{i}.npy')), np.concatenate( (inputs.F.cpu().detach().numpy(), prm.cpu().detach().numpy()) , axis=1 ) )
 
         # Calculate recall of peak-box detection
         from core.calibration import Calibration
@@ -129,9 +136,9 @@ def main() -> None:
         labels = utils.read_labels( label_file)
         
 
-        kept_idxs = utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=inputs.F[:,0:3].cpu().detach().numpy(),
-                                               crm=outputs, peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
-        """
+        #kept_idxs = utils.save_in_kitti_format(file_id=filename[:-4], kitti_output=configs.outputs, points=inputs.F[:,0:3].cpu().detach().numpy(),
+        #                                       crm=outputs, peak_list=peak_list, peak_responses=peak_responses, calibs=calibs, labels=labels)
+        
         bbox_found = [0] * len(labels)
         for p in peak_list:
             peak_ind = p.cpu()
@@ -156,8 +163,8 @@ def main() -> None:
                 tp_peak += 1
             else:
                 fp_peak += 1
+        
         """
-
     #print("Recall (TP/(TP+FN)) of boxes wrt detected peaks: ", tp / (tp+fn))
 
     #print("Precision (TP/(TP+FP)) of peaks detected : ", tp_peak / (tp_peak+fp_peak))

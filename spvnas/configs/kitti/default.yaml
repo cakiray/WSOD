@@ -16,10 +16,10 @@ dataset:
   labels_path: dataset/kitti/object/training/label_2
   calibs_path: dataset/kitti/object/training/calib
   planes_path: Ezgi/plane_models
-  num_points: 80000
+  num_points: 20000
   voxel_size: 0.05
   quantization_size: 3
-  radius: 3
+  radius: 2
 
 num_epochs: 5
 prm:
@@ -35,8 +35,8 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /dummy
 
-outputs: /data/Ezgi/CenterPoint/data/kitti_prm/training/prm
-
+outputs_: /data/Ezgi/CenterPoint/data/kitti_prm/training/prm
+outputs: /data/Ezgi/dummy
 model:
   name: spvnas_cnn
   no_bn: false
