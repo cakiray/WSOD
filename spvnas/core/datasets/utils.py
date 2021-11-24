@@ -20,7 +20,7 @@ def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scal
             z = center[0][2] #+ h/2 # normally z is the min value but here I set it to middle
             center = [x,y,z]
 
-        
+            """
             # 1-(x/radius)
             crm =  get_distance(points, center, _in3d = False)
             crm =  standardize(crm, threshold=radius)
@@ -32,7 +32,7 @@ def generate_CRM_wfiles(radius, points, labels_path,  calibs_path, rot_mat, scal
             crm =  standardize(crm, threshold=radius)
             crm = -1*(crm ** 2).reshape(-1,1)
             crm = np.exp(crm).reshape(-1,1) 
-            """
+            
             map += crm
     
     return map
