@@ -55,8 +55,9 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
     grad_output.zero_()
 
     valid_prm = []
-    prm_sum = torch.zeros(size=(inputs.shape[0],1))
+    prm_sum = torch.zeros(size=(inputs.shape[0],1)).to(outputs.device)
 
+    #print( min( outputs * torch.log(torch.abs( inputs[:, 0] + 2))), max( outputs * torch.log(torch.abs( inputs[peak_list[:, 0] + 2)) ) )
     valid_peak_list = []
     avg_sum = 0.0
     for idx in range(peak_list.size(0)):
@@ -64,11 +65,13 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         # if peak val * log(z_val) < peak_threshold
         # amplify Center Response Map values
         # x is forward direction in velo
-        if peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2)).item() > peak_threshold:
+        val = peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2)).item()
+        #print(val)
+        if val > peak_threshold:
             valid_peak_list.append(peak_list[idx])
 
     if len(valid_peak_list) == 0:
-        return valid_peak_list, valid_prm, prm_sum
+        return valid_peak_list, valid_prm, prm_sum.cpu()
     
     prm_max = torch.zeros(size=(inputs.shape[0],1)).to(outputs.device)
     for idx in range(len(valid_peak_list)):
@@ -114,5 +117,7 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         
         #prm_sum +=prm
     prm_max = prm_max.cpu()
+    #prm_sum = prm_sum.cpu()
+    #return valid_peak_list, valid_prm, prm_sum
     return valid_peak_list, valid_prm, prm_max# prm_sum
 

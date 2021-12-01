@@ -276,7 +276,7 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         pc_ = open3d.utility.Vector3dVector(obj_mask)
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
-
+        """
         # To calculate rotation around z(up):
         # Set z=0 and z=1 for all points in the object mask
         # Calculate rotation matrix R, orthogonal unit-vectors pointing on rotated x, y and z directions
@@ -305,21 +305,21 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
             ry += np.pi/2
         else:
             ry -= np.pi/2
-        
+        """
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
         #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
 
-        """
-        rect, R, center_velo, corners_velo= _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
+        
+        rect, R, _, _ = _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
         
         from pyquaternion import Quaternion
         quat = Quaternion(matrix=R)
 
         ry = quat.radians + np.pi/2
         #np_center = calibs.project_velo_to_rect(center)
-        """
+        
         """
         corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
         np_corners = np.asarray(corners_o3d) #Numpy array, 8x3

@@ -24,7 +24,7 @@ dataset:
 num_epochs: 5
 prm:
   win_size: 5
-  peak_threshold: 0.8
+  peak_threshold: 1.2
   iou_threshold: 0.3
 
 batch_size: 8
@@ -35,8 +35,9 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /dummy
 
-outputs_: /data/Ezgi/CenterPoint/data/kitti_prm/training/prm
-outputs: /data/Ezgi/dummy
+outputs: /data/Ezgi/CenterPoint/data/kitti_prm/testing/prm
+outputs_: /data/Ezgi/experiments_lshape
+outputs__ : /data/Ezgi/testtt
 model:
   name: spvnas_cnn
   no_bn: false

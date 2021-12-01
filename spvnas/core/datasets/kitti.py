@@ -127,7 +127,9 @@ class KITTIInternal:
                 self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
         elif split=="test":
-            val_idxs = open( os.path.join(root, txt_path, "val500.txt") ).readlines()
+            #val_idxs = open( os.path.join(root, txt_path, "test500.txt") ).readlines()
+            val_idxs = open( "/data/Ezgi/CenterPoint/data/kitti_prm/ImageSets/test.txt" ).readlines()
+            #val_idxs = open( "/data/Ezgi/testtt.txt" ).readlines()
             #val_idxs = val_idxs[len(val_idxs)//2:]
             for idx in val_idxs:
                 idx = idx.strip()
@@ -210,7 +212,7 @@ class KITTIInternal:
     def __getitem__(self, index):
         pc_file = open ( self.pcs[index], 'rb')        
         block_ = np.fromfile(pc_file, dtype=np.float32).reshape(-1, 4)
-        if 'test' not in self.split:
+        if  False:#'test' not in self.split:
             front_idxs = block_[:,0]>0
             block_ = block_[front_idxs]
 
