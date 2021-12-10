@@ -35,7 +35,7 @@ checkpoints: /data/Ezgi/checkpoints
 tfevent: /data/Ezgi/runs
 tfeventname: /dummy
 
-outputs: /data/Ezgi/CenterPoint/data/kitti_prm/testing/prm
+outputs: /data/Ezgi/CenterPoint/data/kitti_prm/training_1000/prm
 outputs_: /data/Ezgi/experiments_lshape
 outputs__ : /data/Ezgi/testtt
 model:
