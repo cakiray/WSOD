@@ -2,7 +2,7 @@ import os
 import numpy as np
 import struct
 import open3d
-from calibration import *
+from .calibration import *
 
 def load_pc(f):
     file = open(f, 'rb')
@@ -225,6 +225,7 @@ def visualize_pointcloud( pc, colors, pred_bboxes=None, gt_bboxes=None, idx=0, m
                  [0, 4], [1, 5], [2, 6], [3, 7]]
         lenght = len(gt_lines)
         for i in range(len(gt_bboxes)//8-1): #for multiple lines, need to extend lines
+
             newlines = [[0,0] for _ in range(lenght)]
             for j in range(lenght):
                 newlines[j][0] = gt_lines[j][0] + (8 * (i+1))
@@ -232,7 +233,7 @@ def visualize_pointcloud( pc, colors, pred_bboxes=None, gt_bboxes=None, idx=0, m
             # newlines will span 8 to 9, 9 to 10, so on...
             gt_lines.extend(newlines)
         # Use the same color for all lines
-        clrs = [[0, 0, 1] for _ in range(len(gt_lines))]
+        clrs = [[1, 0, 0] for _ in range(len(gt_lines))]
 
         gt_line_set = open3d.open3d.geometry.LineSet()
 
@@ -244,6 +245,57 @@ def visualize_pointcloud( pc, colors, pred_bboxes=None, gt_bboxes=None, idx=0, m
     else:
         open3d.open3d.visualization.draw_geometries([pcd])
 
+def read_labels( label_path, idx=None):
+    if idx is not None:
+        path =os.path.join(label_path, '%06d.txt' % idx)
+    else:
+        path = label_path
+    label = np.loadtxt(path,
+                       dtype={'names': ('type', 'truncated', 'occuluded', 'alpha', 'xmin', 'ymin', 'xmax', 'ymax', 'h', 'w', 'l', 'x', 'y', 'z','rotation_y'),
+                              'formats': ('S14', 'float', 'float', 'float', 'float', 'float', 'float', 'float','float', 'float', 'float', 'float', 'float', 'float', 'float')})
+
+    if label.size == 1:
+        label = label[np.newaxis]
+
+    return label
+
+def visualize_pointcloud_generatebox( pc, colors):
+
+    mask = colors.flatten()>0
+    colors = np.ones_like(mask)
+    colors = colors[mask]
+
+    pc = pc[mask]
+
+    pc_ = np.zeros(shape=(pc.shape[0]*2, pc.shape[1]))
+    pc_t = pc
+    pc_t[:,2] = 0
+    pc_[:pc.shape[0]] = pc_t
+    pc_t[:,2] = 1
+    pc_[pc.shape[0]:] = pc_t
+
+    pc= pc_
+    color = np.zeros((colors.shape[0], 3))
+    color[:,0] = colors
+
+
+    pcd=open3d.open3d.geometry.PointCloud()
+    pcd.points= open3d.open3d.utility.Vector3dVector(pc[:, 0:3])
+    pcd.colors = open3d.open3d.utility.Vector3dVector(color)
+    # for us, it corresponds to class response map
+
+    box_o = open3d.open3d.geometry.OrientedBoundingBox()
+    po = open3d.open3d.utility.Vector3dVector(pc[:, 0:3])
+    box_o = box_o.create_from_points(po)
+    box_o.color = [0,1,0]
+
+    box_a = open3d.open3d.geometry.AxisAlignedBoundingBox()
+    box_a.color = [1,0,1]
+    pa = open3d.open3d.utility.Vector3dVector(pc[:, 0:3])
+    box_a = box_a.create_from_points( pa)
+
+
+    open3d.open3d.visualization.draw_geometries([pcd, box_a, box_o])
 
 
 def distance( p1, p2, _in3d=False):
@@ -343,6 +395,22 @@ def box_center_to_corner(data, calibs):
         # convert corners to velodyne coords.
         corner_box[i]= calibs.project_rect_to_velo(np.array([corner_box[i]]))
     return corner_box
+
+def create_kitti_format_annot_pkl(pkl_data, only_car=False):
+    kitti_annot = []
+    for i in range(len(pkl_data['name'])):
+        type = pkl_data['name'][i]
+        if not only_car or type == 'Car':
+            dict_ = dict()
+            [x,y,z] = pkl_data['location'][i]
+            [l,h,w] = pkl_data['dimensions'][i]
+            ry = pkl_data['rotation_y'][i]
+
+            dict_.update({'x':x, 'y':y, 'z':z, 'l':l, 'h':h, 'w':w, 'rotation_y':ry, 'type':type})
+            kitti_annot.append(dict_)
+    return kitti_annot
+
+
 
 def get_bboxes( labels, calibs):
     bboxes = []
