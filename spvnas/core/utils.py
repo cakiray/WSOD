@@ -148,8 +148,6 @@ def generate_car_masks(points, labels, calibs):
             b_points = obbox.get_point_indices_within_bounding_box(points_vec)
 
             map[b_points] = 1
-    #utils.visualize_pointcloud(points, map, bboxes=bboxes)
-
     return map
 
 def generate_prm_mask(prm):
@@ -262,7 +260,7 @@ def KNN(points, anchor, k=10):
 
 #https://github.com/sshaoshuai/PointRCNN/blob/1d0dee91262b970f460135252049112d80259ca0/tools/eval_rcnn.py
 #KITTI format of bounding box of instances
-def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
+def get_kitti_format( points, crm, peak_list, peak_responses, calibs, rot_calc=1) :
     bboxs_raw = []
     for i,response in enumerate(peak_responses):
         #dimension are of anchor
@@ -276,73 +274,53 @@ def get_kitti_format( points, crm, peak_list, peak_responses, calibs) :
         pc_ = open3d.utility.Vector3dVector(obj_mask)
         bbox = open3d.geometry.AxisAlignedBoundingBox()
         bbox = bbox.create_from_points(pc_)
-        """
-        # To calculate rotation around z(up):
-        # Set z=0 and z=1 for all points in the object mask
-        # Calculate rotation matrix R, orthogonal unit-vectors pointing on rotated x, y and z directions
-        # Rotation around y is given by arctan2(y,x)
-        bbox_oriented = open3d.geometry.OrientedBoundingBox()
-        size = obj_mask.shape[0]
-        pc_or = np.zeros(shape=(size*2,3))
-        pc_or[:size] = obj_mask
-        pc_or[size:] = obj_mask
-        pc_or[:size, -1] = 0
-        pc_or[size:, -1] = 1
-        
-        pc_or = open3d.utility.Vector3dVector(pc_or)
-        bbox_oriented = bbox_oriented.create_from_points(pc_or)
-        #bbox_oriented.extent # extension of convex hull on x,y,z
-        R = bbox_oriented.R
-        if  np.linalg.det(R) < 0:
-           R = -R
 
-        #orientation_vector = np.arctan2( R[:,1], R[:,0])  # (3,1) vector as (ry, ry+pi/2, 0) since z doesn't have rotation
-        #ry = orientation_vector[0]
-        from pyquaternion import Quaternion
-        quat = Quaternion(matrix=R)
-        ry = quat.radians #+ np.pi/2
-        if quat.get_axis(undefined=[0,0,0])[2] == -1:
-            ry += np.pi/2
-        else:
-            ry -= np.pi/2
-        """
         #get center of bbox and convert from velo to rect
         np_center = bbox.get_center().reshape(1,3) #numpy, 1x3, in velo
-        #np_center = bbox_oriented.get_center().reshape(1,3)
         np_center = calibs.project_velo_to_rect(np_center) # x,y,z in velo -> z,x,y in rect
 
-        
-        rect, R, _, _ = _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
-        
-        from pyquaternion import Quaternion
-        quat = Quaternion(matrix=R)
+        if rot_calc == 1: # open3d-based rotation angle calculation
+            # To calculate rotation around z(up):
+            # Set z=0 and z=1 for all points in the object mask
+            # Calculate rotation matrix R, orthogonal unit-vectors pointing on rotated x, y and z directions
+            # Rotation around y is given by arctan2(y,x)
+            bbox_oriented = open3d.geometry.OrientedBoundingBox()
+            size = obj_mask.shape[0]
+            pc_or = np.zeros(shape=(size*2,3))
+            pc_or[:size] = obj_mask
+            pc_or[size:] = obj_mask
+            pc_or[:size, -1] = 0
+            pc_or[size:, -1] = 1
 
-        ry = quat.radians + np.pi/2
-        #np_center = calibs.project_velo_to_rect(center)
-        
-        """
-        corners_o3d = bbox.get_box_points() #open3d.utility.Vector3dVector
-        np_corners = np.asarray(corners_o3d) #Numpy array, 8x3
-        #corners from velodyne to rect
-        np_corners = calibs.project_velo_to_rect(np_corners) # 8x3
-        
-        # h->z, w->x, l->y
-        min_bound = bbox.get_min_bound()
-        max_bound = bbox.get_max_bound()
-        dimensions = max_bound-min_bound #length of each side of bounding box, eg. x,y,z:w,l,h
-        w, l, h = dimensions[0], dimensions[1], dimensions[2] # in velodyne coord order
-        
-        """
+            pc_or = open3d.utility.Vector3dVector(pc_or)
+            bbox_oriented = bbox_oriented.create_from_points(pc_or)
+            #bbox_oriented.extent # extension of convex hull on x,y,z
+            R = bbox_oriented.R
+            if  np.linalg.det(R) < 0:
+               R = -R
+
+            from pyquaternion import Quaternion
+            quat = Quaternion(matrix=R)
+            ry = quat.radians
+            if quat.get_axis(undefined=[0,0,0])[2] == -1:
+                ry += np.pi/2
+            else:
+                ry -= np.pi/2
+
+        if rot_calc == 2: # l-shape fitting algo based rotation calculation
+            rect, R, _, _ = _rectangle_search(x=obj_mask[:,0], y=obj_mask[:,1])
+            from pyquaternion import Quaternion
+            quat = Quaternion(matrix=R)
+            ry = quat.radians + np.pi/2
+
         #3D bounding box's corners location on image
         np_corners = get_corners(np_center) # in rect coord
         corners_img = calibs.corners3d_to_img_boxes(np.asarray([np_corners])) # 1x4
-
         x, y, z = np_center[0,0], np_center[0,1]+h/2, np_center[0,2] # in rect coord
 
-        #ry = np.pi/2 # pi/2 if ry is not calculated
         beta = np.arctan2(z, x)
         alpha = -np.sign(beta) * np.pi / 2 + beta + ry
-        score = (crm[peak_list[i][2]].item()+ response[peak_list[i][2]] )/2 # np.log( points[peak_list[i][2],0])
+        score = (crm[peak_list[i][2]].item()+ response[peak_list[i][2]] )/2
         # kitti format is
         #  type of object 'Car', 'Van', 'Truck', 'Pedestrian', 'Person_sitting', 'Cyclist', 'Tram','Misc' or 'DontCare'
         #  truncated
@@ -386,24 +364,18 @@ def nms_torchvision(bboxes_raw):
     box_info = box_info.to(device = torch.cuda.current_device())
     scores = scores.to(device = torch.cuda.current_device())
     kept_idxs = tv.ops.nms(boxes=box_info, scores=scores, iou_threshold=0.3 )
-    
     return kept_idxs
 
 def save_in_kitti_format(file_id, kitti_output, points, crm, peak_list, peak_responses, calibs, labels):
 
     kitti_output_file = os.path.join(kitti_output, f'{file_id}.txt')
     kitti_format_list = get_kitti_format(points, crm, peak_list, peak_responses, calibs)
-    #kept_idxs = non_maximum_supression(kitti_format_list)
     kept_idxs = nms_torchvision(kitti_format_list)
     with open(kitti_output_file, 'w') as f:
         for idx in kept_idxs:
             kitti_format = kitti_format_list[idx]
             print('%s 0.0 3 %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f' %
                   kitti_format, file=f)
-
-            """img_boxes_w = corners_img[:, 2] - corners_img[:, 0]
-           img_boxes_h = corners_img[:, 3] - corners_img[:, 1]
-           """
     return kept_idxs
 
 #https://github.com/Silas-Asamoah/Lshape-fitting/tree/f2fc4e52d8c0e7203c36b3fcf4a9d50fa7132003

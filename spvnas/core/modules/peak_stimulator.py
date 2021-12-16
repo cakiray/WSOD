@@ -33,13 +33,13 @@ class PeakStimulation(autograd.Function):
             peak_map = peak_map.float()
             ctx.save_for_backward(input, peak_map)
             
-            return input, peak_list, (input * peak_map).view( batch_size, num_channels, -1).sum(2) / \
+            return  peak_list, (input * peak_map).view( batch_size, num_channels, -1).sum(2) / \
                 peak_map.view( batch_size, num_channels, -1).sum(2)
         else:
-            return input, peak_list, None
+            return peak_list, None
             
     @staticmethod
-    def backward(ctx, grad_crm, grad_peak_list, grad_output):
+    def backward(ctx,  grad_peak_list, grad_output):
         input, peak_map, = ctx.saved_tensors
         _, num_channels, n = input.size()
         grad_input = peak_map * grad_output.view( 1, num_channels,1)
@@ -56,7 +56,6 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
 
     valid_prm = []
     prm_sum = torch.zeros(size=(inputs.shape[0],1)).to(outputs.device)
-
     #print( min( outputs * torch.log(torch.abs( inputs[:, 0] + 2))), max( outputs * torch.log(torch.abs( inputs[peak_list[:, 0] + 2)) ) )
     valid_peak_list = []
     avg_sum = 0.0
@@ -66,7 +65,6 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         # amplify Center Response Map values
         # x is forward direction in velo
         val = peak_val * torch.log(torch.abs( inputs[peak_list[idx,2], 0] + 2)).item()
-        #print(val)
         if val > peak_threshold:
             valid_peak_list.append(peak_list[idx])
 
@@ -78,15 +76,6 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
         grad_output.zero_()
         # Set 1 to the max of predicted center points in gradient
         grad_output[valid_peak_list[idx][0], valid_peak_list[idx][1], valid_peak_list[idx][2]] = 1
-        """
-        # Set K nearest neighbors of peak as 1, backpropagate from a group of points
-        k=1
-        #knn_list = utils.KNN(points=inputs.F, anchor=peak_list[idx,2], k=k)
-        knn_list = utils.KNN(points=inputs.F, anchor=valid_peak_list[idx][2], k=k)
-        for n in knn_list:
-            grad_output[valid_peak_list[idx][0], valid_peak_list[idx][1], n] = 1
-            #grad_output[peak_list[idx, 0], peak_list[idx, 1], n] = 1
-        """
         if inputs.grad is not None:
             inputs.grad.zero_() # shape is N x input_channel_num , 2D
 
@@ -110,14 +99,9 @@ def prm_backpropagation(inputs, outputs, peak_list, peak_threshold=0.9, normaliz
             prm[torch.lt(prm,0.005)] = 0.0
         
         prm = prm.view(-1,1)
-    
         prm_max = torch.max(torch.cat( (prm_max, prm), 1 ), dim=1).values.view(-1,1)
-        
         valid_prm.append(prm.cpu())
         
-        #prm_sum +=prm
     prm_max = prm_max.cpu()
-    #prm_sum = prm_sum.cpu()
-    #return valid_peak_list, valid_prm, prm_sum
-    return valid_peak_list, valid_prm, prm_max# prm_sum
+    return valid_peak_list, valid_prm, prm_max
 

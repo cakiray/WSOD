@@ -106,7 +106,6 @@ class KITTIInternal:
         self.calibs = []
 
         # weakly annotated data loader
-        
         if split == 'train':
             train_idxs = open( os.path.join(root, txt_path, "train.txt") ).readlines()
             for idx in train_idxs:
@@ -139,36 +138,11 @@ class KITTIInternal:
                 self.labels.append( os.path.join(self.root, self.labels_path, '%s.txt' % idx) )
                 self.calibs.append( os.path.join(self.root, self.calibs_path, '%s.txt' % idx) )
 
-        """
-        # fully annotated data loader
-        if split == 'train':
-            for idx in range(500):
-                self.pcs.append(os.path.join( self.root, self.data_path ,'%06d.bin' % idx))
-                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%06d.npy' % idx))
-                self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
-                self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
-                self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
-        elif split=="valid":
-            for idx in range(500,550):
-                self.pcs.append(os.path.join(self.root, self.data_path, '%06d.bin' % idx))
-                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%06d.npy' % idx))
-                self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
-                self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
-                self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
-        elif split=="test":
-            for idx in range(550,1000):
-                self.pcs.append(os.path.join(self.root, self.data_path, '%06d.bin' % idx))
-                self.crm_pcs.append(os.path.join(self.root, self.crm_path, '%06d.npy' % idx))
-                self.planes.append(os.path.join(self.root, self.planes_path, '%06d.txt' % idx) )
-                self.labels.append( os.path.join(self.root, self.labels_path, '%06d.txt' % idx) )
-                self.calibs.append( os.path.join(self.root, self.calibs_path, '%06d.txt' % idx) )
-        """
     def set_angle(self, angle):
         self.angle = angle
 
     def align_pcd(self, pc, plane_file):
         points = pc
-
         #get plane model from txt
         plane_model =  open(plane_file, 'r').readlines()[0].rstrip()
         a,b,c,d = map(float, plane_model.split(' '))
@@ -190,13 +164,6 @@ class KITTIInternal:
         u1 = b / plane_normal_length
         u2 = -a / plane_normal_length
         rotation_axis = (u1, u2, 0)
-        """
-        # Generate axis-angle representation
-        optimization_factor = 1#1.4
-        axis_angle = tuple([x * rotation_angle * optimization_factor for x in rotation_axis])
-        # Rotate point cloud
-        R = pcd.get_rotation_matrix_from_axis_angle(axis_angle)
-        """
         from pyquaternion import Quaternion
         q8c = Quaternion(axis=rotation_axis, angle=rotation_angle)
         R = q8c.rotation_matrix
@@ -236,7 +203,7 @@ class KITTIInternal:
 
             block_[:, :3] = np.dot(block_[:, :3], rot_mat) * scale_factor
 
-        crm_target_ = generate_CRM_wfiles(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index], rot_mat = rot_mat, scale_factor =scale_factor)
+        crm_target_ = generate_CRM(radius=self.radius, points=block_ , labels_path=self.labels[index], calibs_path=self.calibs[index], rot_mat = rot_mat, scale_factor =scale_factor)
         
         pc_ = np.round(block_[:, :3] / self.voxel_size)
         pc_ -= pc_.min(0, keepdims=1)

@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from torch.autograd import Function
 import torchsparse
 from torchsparse.sparse_tensor import SparseTensor
-
 import torchsparse.nn as spnn
 import torchsparse.nn.functional as spf
 

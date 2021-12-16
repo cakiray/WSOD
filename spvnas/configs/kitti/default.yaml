@@ -12,7 +12,6 @@ dataset:
   name: kitti
   root: /data
   data_path: dataset/kitti/object/training/velodyne
-  crm_path: Ezgi/center_response_map_r2_gs
   labels_path: dataset/kitti/object/training/label_2
   calibs_path: dataset/kitti/object/training/calib
   planes_path: Ezgi/plane_models
@@ -22,13 +21,12 @@ dataset:
   radius: 2
 
 num_epochs: 5
+
 prm:
   win_size: 5
   peak_threshold: 1.2
-  iou_threshold: 0.3
 
 batch_size: 8
-batch_norm: true
 workers_per_gpu: 2
 best_model: /data/Ezgi/best_model
 checkpoints: /data/Ezgi/checkpoints
@@ -36,8 +34,7 @@ tfevent: /data/Ezgi/runs
 tfeventname: /dummy
 
 outputs: /data/Ezgi/CenterPoint/data/kitti_prm/training_1000/prm
-outputs_: /data/Ezgi/experiments_lshape
-outputs__ : /data/Ezgi/testtt
+
 model:
   name: spvnas_cnn
   no_bn: false

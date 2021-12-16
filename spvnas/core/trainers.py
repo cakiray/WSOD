@@ -1,6 +1,5 @@
 from typing import Any, Callable, Dict
 import numpy as np
-import os
 import torch
 from torch import nn
 from torchpack.train import Trainer
@@ -30,7 +29,6 @@ class SemanticKITTITrainer(Trainer):
         self.dataflow.sampler.set_epoch(self.epoch_num-1)
         self.dataflow.worker_init_fn = lambda worker_id: np.random.seed(
                 self.seed + (self.epoch_num-1) * self.num_workers + worker_id)
-        print ("lr: ", self.optimizer.state_dict()['param_groups'][0]['lr'] )
 
     def _run_step(self, feed_dict: Dict[str, Any]) -> Dict[str, Any]:   
         feed_dict_cuda = dict()
@@ -40,7 +38,6 @@ class SemanticKITTITrainer(Trainer):
 
         inputs = feed_dict_cuda['lidar'] # voxelized input, .C is point cloud (N,4)
         targets = feed_dict['targets'].F.float().cuda(non_blocking=True)
-        
         outputs = self.model(inputs) # voxelized output (N,1)
         
         if outputs.requires_grad:
@@ -57,14 +54,12 @@ class SemanticKITTITrainer(Trainer):
     def _after_epoch(self) -> None:
         if self.model.training:
             from torch.utils.tensorboard import SummaryWriter
-
             assert  self.tfevent!=None and self.tfeventname!=None
 
             writer = SummaryWriter(self.tfevent+self.tfeventname)
             for name, param in self.model.named_parameters():
                 if 'bn' not in name:
                     writer.add_histogram(name, param.grad, self.epoch_num)
-
         self.model.eval()
 
     def _state_dict(self) -> Dict[str, Any]:
@@ -86,54 +81,4 @@ class SemanticKITTITrainer(Trainer):
     def _before_train(self) -> None:
         if self.checkpoint is not None:
             checkpoint = torch.load(self.checkpoint)
-            #print("/ncheckpoint:", checkpoint)
             self.load_state_dict(checkpoint)
-
-    def _before_step(self, feed_dict: Dict[str, Any]) -> None:
-        """
-        # Before step, generetate new CRM with required radius.
-        # Then update feed_dict
-        from core.datasets.utils import generate_CRM_wfiles
-        _inputs = dict()
-        for key, value in feed_dict.items():
-            if key not in ['subsize', 'pc_file','file_name','calibs','labels','rot_mat', 'scale_factor']:
-                _inputs[key] = value.cuda()
-        #inputs = _inputs['lidar'] # voxelized input, .C is point cloud (N,4)
-        points = _inputs['lidar'].F.cpu()
-        calibs = feed_dict['calibs']
-        labels = feed_dict['labels']
-        rot_mat = feed_dict['rot_mat']
-        scale_factor = feed_dict['scale_factor']
-        subsizes = feed_dict['subsize']
-        start = 0
-        for i in range(len(calibs)):
-            calib = calibs[i]
-            label = labels[i]
-            rot_matrix = rot_mat[i]
-            scale_fac = scale_factor[i]
-            subsize = subsizes[i]
-            
-            point = np.asarray(points[start:subsize+start, :]).astype(np.float32)
-            radius = int ((self.num_epochs-self.epoch_num) / 5)
-            if radius<2:
-                radius=2
-            crm_target = generate_CRM_wfiles(radius, points = point, labels_path=label,
-                                             calibs_path=calib, rot_mat=rot_matrix, scale_factor=scale_fac)
-            
-            feed_dict['targets'].F[start:subsize+start, :] = torch.from_numpy(crm_target).to(feed_dict['targets'].F)
-            start += subsize
-        """
-        pass
-    def _after_step(self, output_dict: Dict[str, Any]):
-        """
-        from torch.utils.tensorboard import SummaryWriter
-
-        assert  self.tfevent!=None or self.tfeventname!=None
-
-        writer = SummaryWriter(self.tfevent+self.tfeventname)
-        for name, param in self.model.named_parameters():
-            if 'bn' not in name:
-                print(name, type(param), type(param.grad))
-                writer.add_histogram(name, param.grad, self.global_step)
-        """
-        pass

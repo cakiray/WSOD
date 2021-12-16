@@ -14,12 +14,11 @@ import torch.nn as nn
 from torchpack import distributed as dist
 
 from core.models.semantic_kitti.spvnas import SPVNAS
-from core.models.semantic_kitti.minkunet import MinkUNet
 from core.models.semantic_kitti.spvcnn import SPVCNN
 from core.models.semantic_kitti.spvnas_cnn import SPVNAS_CNN
 
 
-__all__ = ['spvnas_specialized', 'minkunet', 'spvcnn']
+__all__ = ['spvnas_specialized', 'spvcnn', 'spvnas_cnn']
 
 
 def download_url(url, model_dir='~/.torch/', overwrite=False):
@@ -33,6 +32,26 @@ def download_url(url, model_dir='~/.torch/', overwrite=False):
         sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
         urlretrieve(url, cached_file)
     return cached_file
+
+def spvnas_cnn(pretrained=False, **kwargs):
+
+    input_channels = kwargs.get('input_channels', 5)
+    num_classes = kwargs.get('num_classes', 1)
+    model = SPVNAS_CNN(
+        num_classes=num_classes,
+        input_channels = input_channels,
+        macro_depth_constraint=1,
+    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
+
+    if pretrained:
+        dict_ = torch.load(kwargs['weights'])['model']
+        dict_correct_naming = dict()
+        for key in dict_:
+            dict_correct_naming[key.replace('module.','')] = dict_[key]
+        model.load_state_dict(dict_correct_naming)
+        print("Model weights are loaded.")
+
+    return model
 
 def spvnas_best(net_id, weights, configs, **kwargs):
     url_base = 'https://hanlab.mit.edu/files/SPVNAS/spvnas_specialized/'
@@ -52,27 +71,6 @@ def spvnas_best(net_id, weights, configs, **kwargs):
     for key in dict_:
         dict_correct_naming[key.replace('module.','')] = dict_[key]
     model.load_state_dict(dict_correct_naming)
-    return model
-
-def spvnas_cnn(pretrained=False, **kwargs):
-
-    input_channels = kwargs.get('input_channels', 5)
-    num_classes = kwargs.get('num_classes', 1)
-    model = SPVNAS_CNN(
-        num_classes=num_classes,
-        input_channels = input_channels,
-        macro_depth_constraint=1,
-    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
-    #model.shrink()
-    #model.remove_skipconnection()
-    if pretrained:
-        dict_ = torch.load(kwargs['weights'])['model']
-        dict_correct_naming = dict()
-        for key in dict_:
-            dict_correct_naming[key.replace('module.','')] = dict_[key]
-        model.load_state_dict(dict_correct_naming)
-        print("Model weights are loaded.")
-
     return model
 
 def spvnas_cnn_specialized(pretrained=False, **kwargs):
@@ -140,26 +138,6 @@ def spvnas_supernet(net_id, pretrained=True, **kwargs):
     if pretrained:
         init = torch.load(
             download_url(url_base + net_id + '/init', model_dir='.torch/spvnas_supernet/%s/' % net_id),
-            map_location='cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu'
-        )['model']
-        model.load_state_dict(init)
-    return model
-
-
-def minkunet(net_id, pretrained=True, **kwargs):
-    url_base = 'https://hanlab.mit.edu/files/SPVNAS/minkunet/'
-    net_config = json.load(open(
-        download_url(url_base + net_id + '/net.config', model_dir='.torch/minkunet/%s/' % net_id)
-    ))
-
-    model = MinkUNet(
-        num_classes=net_config['num_classes'],
-        cr=net_config['cr']
-    ).to('cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu')
-
-    if pretrained:
-        init = torch.load(
-            download_url(url_base + net_id + '/init', model_dir='.torch/minkunet/%s/' % net_id),
             map_location='cuda:%d'%dist.local_rank() if torch.cuda.is_available() else 'cpu'
         )['model']
         model.load_state_dict(init)
