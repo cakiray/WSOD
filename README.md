@@ -51,6 +51,7 @@ _**TRAIN AND TEST CENTERPOINT**_
 ```python 
 > ssh \<username>@131.159.10.176
 > cd /data/Ezgi/wsod/CenterPoint
+> conda activate centerpoint
 > python setup.py develop
 ```
 
@@ -72,3 +73,13 @@ python test.py --cfg_file ${CONFIG_FILE} --batch_size 1 --ckpt ${CKPT}
 ```
 
 For any question, refer to docs in CenterPoint repo.
+
+TENSORBOARD
+
+```
+> ssh -L 16006:127.0.0.1:6006 ezgicakir@131.159.10.176
+> cd /data/Ezgi/CenterPoint
+> conda activate sparse-env
+> tensorboard --logdir output
+> Go to http://127.0.0.1:16006/ in your local computer
+```

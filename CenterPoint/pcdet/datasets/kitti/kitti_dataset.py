@@ -64,24 +64,18 @@ class KittiDataset(DatasetTemplate):
         lidar_file = self.root_split_path / 'velodyne' / ('%s.bin' % idx)
         assert lidar_file.exists()
         lidar = np.fromfile(str(lidar_file), dtype=np.float32).reshape(-1, 4)[:,0:self.num_ftrs]
-        """
-        prm = self.get_prm(idx)
-        prm[lidar[:,0]<=0] = 0
-        lidar = np.concatenate( (lidar[:,0:3], prm), axis=1)
-        """
-
         return lidar
 
     def get_prm(self, idx):
-        #prm_file = self.root_split_path / 'prm' / ('%s.npy' % idx)
-        #assert prm_file.exists(), prm_file
-        lidar_file = self.root_split_path / 'velodyne' / ('%s.bin' % idx)
-        assert lidar_file.exists()
-        lidar = np.fromfile(str(lidar_file), dtype=np.float32).reshape(-1, 4)[:,0:3]
-        #prm =  np.load(prm_file).astype(float).reshape(-1,1)
-        prm = np.zeros((lidar.shape[0], 1))
-        #prm[lidar[:,0]<0] = 0
-        prm = np.concatenate( (lidar, prm), axis=1)
+        lidar = self.get_lidar(idx)[:,0:3] # only x,y,z info taken
+
+        prm_file = self.root_split_path / 'prm' / ('%s.npy' % idx)
+        if not prm_file.exists():
+            prm =  np.zeros(shape=(lidar.shape[0],1))
+        else:
+            prm = np.load(prm_file).astype(float).reshape(-1,1)
+        prm[lidar[:,0]<0] = 0 #only front view points can have positive peak responses
+        prm = np.concatenate( (lidar, prm), axis=1) # prm = (x,y,z,peakresponse)
         return prm
 
     def get_image_shape(self, idx):

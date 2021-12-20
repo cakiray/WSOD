@@ -30,6 +30,8 @@ DATA_CONFIG:
             - NAME: random_world_scaling
               WORLD_SCALE_RANGE: [0.95, 1.05]
 
+
+
 MODEL:
     NAME: CenterPointRCNN
 
@@ -38,6 +40,9 @@ MODEL:
 
     BACKBONE_3D:
         NAME: VoxelBackBone8x
+        FUSION_PLACES: [ 2, 3 ], # 1:begining, 2:middle, 3: end
+        FUSION_OPERATION: max #max, mean, add, multiply
+
 
     MAP_TO_BEV:
         NAME: HeightCompression

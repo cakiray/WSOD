@@ -122,8 +122,12 @@ class VoxelBackBone8x(nn.Module):
             nn.ReLU(),
         )
         self.num_point_features = 128
-        
-        
+
+        fusion_places = []
+        self.fusion_places = self.model_cfg.get('FUSION_PLACES', fusion_places)
+
+        fusion_operation = 'max'
+        self.fusion_operation = self.model_cfg.get('FUSION_OPERATION', fusion_operation)
 
 
     def forward(self, batch_dict):
@@ -159,7 +163,15 @@ class VoxelBackBone8x(nn.Module):
         
         x = self.conv_input(input_sp_tensor)
         y = self.conv_input_prm(input_prm_tensor)
-        #x.features = x.features + y.features
+        if 1 in self.fusion_places:
+            if 'add' in self.fusion_operation:
+                x.features = x.features + y.features
+            if 'multiply' in self.fusion_operation:
+                x.features = x.features * y.features
+            if 'max' in self.fusion_operation:
+                x.features = torch.maximum( x.features, y.features )
+            if 'mean' in self.fusion_operation:
+                x.features = (x.features + y.features) / 2
 
         x_conv1 = self.conv1(x)
         y_conv1 = self.conv1(y)
@@ -170,13 +182,17 @@ class VoxelBackBone8x(nn.Module):
         x_conv3 = self.conv3(x_conv2)
         y_conv3 = self.conv3(y_conv2)
 
+        if 2 in self.fusion_places:
+            if 'add' in self.fusion_operation:
+                x_conv3.features = x_conv3.features + y_conv3.features
+            if 'multiply' in self.fusion_operation:
+                x_conv3.features = x_conv3.features * y_conv3.features
+            if 'max' in self.fusion_operation:
+                x_conv3.features = torch.maximum( x_conv3.features, y_conv3.features )
+            if 'mean' in self.fusion_operation:
+                x_conv3.features = (x_conv3.features + y_conv3.features) / 2
         
         #prm_ftr_norm = nn.functional.normalize(y_conv3.features)
-        #prm_ftr_norm = y_conv3.features
-        #print(y_conv3.features.shape, prm_ftr_norm.shape)
-        #print("*** ", x_conv3.features, y_conv3.features)
-        #x_conv3.features = (y_conv3.features + x_conv3.features)/2
-        #x_conv3.features = torch.maximum( y_conv3.features, x_conv3.features)
 
         x_conv4 = self.conv4(x_conv3)
         y_conv4 = self.conv4(y_conv3)
@@ -186,13 +202,16 @@ class VoxelBackBone8x(nn.Module):
         out = self.conv_out(x_conv4)
         out_y = self.conv_out(y_conv4)
 
+        if 3 in self.fusion_places:
+            if 'add' in self.fusion_operation:
+                out.features = out.features + out_y.features
+            if 'multiply' in self.fusion_operation:
+                out.features = out.features * out_y.features
+            if 'max' in self.fusion_operation:
+                out.features = torch.maximum( out.features, out_y.features )
+            if 'mean' in self.fusion_operation:
+                out.features = (out.features + out_y.features) / 2
         #prm_ftr_norm = nn.functional.normalize(out_y.features)
-        #prm_ftr_norm = out_y.features
-        
-        #print("== ",out.features, prm_ftr_norm)
-        
-        #out.features = (out.features + out_y.features) /2
-        #out.features = torch.maximum( out.features, out_y.features)
         
         assert out.features.shape[0] == out_y.features.shape[0], (out.features.shape[0], out_y.features.shape[0])
 
