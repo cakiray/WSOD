@@ -56,6 +56,13 @@ def parse_config():
 
 
 def main():
+    import debugpy
+
+    # Allow other computers to attach to debugpy at this IP address and port.
+    debugpy.listen(('172.17.0.1', 5678))
+
+    # Pause the program until a remote debugger is attached
+    debugpy.wait_for_client()
     args, cfg = parse_config()
     if args.launcher == 'none':
         dist_train = False
