@@ -75,7 +75,7 @@ For any question, refer to docs in CenterPoint repo.
 TENSORBOARD
 
 ```
-> ssh -L 16006:127.0.0.1:6006 ezgicakir@131.159.10.176
+> ssh -L 16006:127.0.0.1:6006 uname@ip
 > cd /data/Ezgi/CenterPoint
 > conda activate sparse-env
 > tensorboard --logdir output
