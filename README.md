@@ -4,7 +4,6 @@ Weakly Supervised Object Detection in Point Cloud
 
 Connect to the server via ssh 
 ```python 
-> ssh \<username>@131.159.10.176
 > cd /data/Ezgi/wsod
 ```
 _**TRAIN AND TEST WSCD**_
@@ -49,7 +48,6 @@ Note:
 
 _**TRAIN AND TEST CENTERPOINT**_
 ```python 
-> ssh \<username>@131.159.10.176
 > cd /data/Ezgi/wsod/CenterPoint
 > conda activate centerpoint
 > python setup.py develop
